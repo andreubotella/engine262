@@ -3,7 +3,9 @@ import { surroundingAgent } from '../engine.mjs';
 import {
   UndefinedValue, NullValue, ObjectValue, Value,
 } from '../value.mjs';
-import { NormalCompletion, Q, ThrowCompletion, X } from '../completion.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X,
+} from '../completion.mjs';
 import { ValueSet, type Mutable, CastType } from '../helpers.mjs';
 import {
   Assert,

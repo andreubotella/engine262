@@ -19,7 +19,7 @@ import {
 import { ValueSet, isArray, type Mutable } from '../helpers.mjs';
 import {
   Assert,
-  SortCompare,
+  CompareArrayElements,
   SameValue,
   MakeBasicObject,
   IsPropertyKey,
@@ -197,7 +197,7 @@ export function ModuleNamespaceCreate(module: AbstractModuleRecord, exports: rea
   const internalSlotsList = ['Module', 'Exports', 'Prototype'] as const;
   // 5. Let M be ! MakeBasicObject(internalSlotsList).
   const M = X(MakeBasicObject(internalSlotsList)) as Mutable<ModuleNamespaceExoticObject>;
-  M[Symbol.toStringTag] = 'ModuleNamespaceExoticObject'
+  M[Symbol.toStringTag] = 'ModuleNamespaceExoticObject';
   /** https://tc39.es/ecma262/#sec-module-namespace-exotic-objects */
   M.SetPrototypeOf = ModuleNamespaceSetPrototypeOf;
   M.IsExtensible = ModuleNamespaceIsExtensible;
@@ -215,7 +215,7 @@ export function ModuleNamespaceCreate(module: AbstractModuleRecord, exports: rea
   M.Module = module;
   // 9. Let sortedExports be a new List containing the same values as the list exports where the values are ordered as if an Array of the same values had been sorted using Array.prototype.sort using undefined as comparefn.
   const sortedExports = [...exports].sort((x, y) => {
-    const result = X(SortCompare(x, y, Value.undefined));
+    const result = X(CompareArrayElements(x, y, Value.undefined));
     return result.numberValue();
   });
   // 10. Set M.[[Exports]] to sortedExports.

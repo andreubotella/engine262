@@ -1,7 +1,7 @@
 import { UTF16EncodeCodePoint } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-codepointstostring */
-export function CodePointsToString(text) {
+export function CodePointsToString(text: readonly number[]): string {
   // 1. Let result be the empty String.
   let result = '';
   // 2. For each code point cp in text, do

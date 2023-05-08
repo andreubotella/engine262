@@ -10,6 +10,7 @@ import {
 import {
   NormalCompletion, Q, ThrowCompletion, X,
 } from '../completion.mjs';
+import { CastType } from '../helpers.mjs';
 import {
   Assert,
   Call,
@@ -28,7 +29,6 @@ import {
   type FunctionObject,
   type ConstructorObject,
 } from './all.mjs';
-import { CastType } from '../helpers.mjs';
 
 // 9.1.1.1 OrdinaryGetPrototypeOf
 export function OrdinaryGetPrototypeOf(O: OrdinaryObject): ObjectValue | NullValue {

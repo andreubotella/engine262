@@ -6,6 +6,7 @@ import {
   wellKnownSymbols,
   type PropertyKeyValue,
   type LanguageType,
+  type OrdinaryObject,
 } from '../value.mjs';
 import {
   surroundingAgent,
@@ -34,6 +35,7 @@ import {
   F as toNumberValue,
   type FunctionObject,
   Realm,
+  OrdinaryIsExtensible,
 } from './all.mjs';
 
 
@@ -126,6 +128,20 @@ export function CreateDataPropertyOrThrow(O, P, V) {
   return success;
 }
 
+/** https://tc39.es/ecma262/#sec-createnonenumerabledatapropertyorthrow */
+export function CreateNonEnumerableDataPropertyOrThrow(O: ObjectValue, P: PropertyKeyValue, V: Value): unused {
+  // 1. Assert: O is an ordinary, extensible object with no non-configurable properties.
+  Assert(
+    O.GetOwnProperty === ObjectValue.prototype.GetOwnProperty
+    && OrdinaryIsExtensible(O as OrdinaryObject) === Value.true
+    && [...O.properties].every(([, p]) => p.Configurable !== Value.false),
+  );
+  const newDesc = new Descriptor({
+    Value: V, Writable: Value.true, Enumerable: Value.false, Configurable: Value.true,
+  });
+  X(DefinePropertyOrThrow(O, P, newDesc));
+}
+
 /** https://tc39.es/ecma262/#sec-definepropertyorthrow */
 export function DefinePropertyOrThrow(O, P, desc) {
   Assert(O instanceof ObjectValue);
@@ -169,7 +185,7 @@ export function HasProperty(O, P) {
 }
 
 /** https://tc39.es/ecma262/#sec-hasownproperty */
-export function HasOwnProperty(O: ObjectValue, P: PropertyKeyValue) {
+export function HasOwnProperty(O: ObjectValue, P: PropertyKeyValue): NormalCompletion<BooleanValue> | ThrowCompletion {
   Assert(O instanceof ObjectValue);
   Assert(IsPropertyKey(P));
   const desc = Q(O.GetOwnProperty(P));
@@ -278,7 +294,7 @@ export function CreateArrayFromList(elements) {
 }
 
 /** https://tc39.es/ecma262/#sec-lengthofarraylike */
-export function LengthOfArrayLike(obj) {
+export function LengthOfArrayLike(obj: ObjectValue) {
   // 1. Assert: Type(obj) is Object.
   Assert(obj instanceof ObjectValue);
   // 2. Return ℝ(? ToLength(? Get(obj, "length"))).

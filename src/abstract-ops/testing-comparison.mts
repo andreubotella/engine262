@@ -208,8 +208,8 @@ export function SameValueNonNumber(x: Value, y: Value): BooleanValue {
   return x === y ? Value.true : Value.false;
 }
 
-/** https://tc39.es/ecma262/#sec-abstract-relational-comparison */
-export function AbstractRelationalComparison(x: Value, y: Value, LeftFirst = true): NormalCompletion<BooleanValue> | ThrowCompletion {
+/** https://tc39.es/ecma262/#sec-islessthan */
+export function IsLessThan(x: Value, y: Value, LeftFirst: boolean): NormalCompletion<BooleanValue | UndefinedValue> | ThrowCompletion {
   let px: Value;
   let py: Value;
   // 1. If the LeftFirst flag is true, then

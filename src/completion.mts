@@ -70,7 +70,7 @@ Object.defineProperty(NormalCompletion, Symbol.hasInstance, {
   configurable: true,
 });
 
-export type unused = NormalCompletion<void> | undefined | void;
+export type unused = NormalCompletion<void> | void;
 export const unused = NormalCompletion<void>(undefined);
 
 export abstract class AbruptCompletion<T = unknown> extends Completion<T> {
@@ -114,7 +114,7 @@ export function UpdateEmpty<T, Q>(completionRecord: Completion<Q>, value: T): Co
  * https://tc39.es/ecma262/#sec-returnifabrupt
  * https://tc39.es/ecma262/#sec-returnifabrupt-shorthands ? OperationName()
  */
-export function ReturnIfAbrupt<T>(_completion: NormalCompletion<T> | ThrowCompletion<unknown>): T
+export function ReturnIfAbrupt<T, Q>(_completion: NormalCompletion<T> | ThrowCompletion<Q>): T
 export function ReturnIfAbrupt(_completion: unknown): never {
   /* c8 skip next */
   throw new TypeError('ReturnIfAbrupt requires build');

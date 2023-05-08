@@ -34,9 +34,11 @@ import {
   Value,
   wellKnownSymbols,
 } from '../value.mjs';
-import { NormalCompletion, Q, ThrowCompletion, X } from '../completion.mjs';
-import { assignProps } from './bootstrap.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X,
+} from '../completion.mjs';
 import { CastType, type Mutable } from '../helpers.mjs';
+import { assignProps } from './bootstrap.mjs';
 
 /** https://tc39.es/ecma262/#sec-boundfunctioncreate */
 export interface BoundFunctionExoticObject extends FunctionObject {
@@ -142,7 +144,7 @@ function FunctionProto_bind([thisArg = Value.undefined, ...args]: readonly Value
   if (IsCallable(Target) === Value.false) {
     return surroundingAgent.Throw('TypeError', 'ThisNotAFunction', Target);
   }
-  CastType<FunctionObject>(Target)
+  CastType<FunctionObject>(Target);
   // 3. Let F be ? BoundFunctionCreate(Target, thisArg, args).
   const F = Q(BoundFunctionCreate(Target, thisArg, args));
   // 4. Let L be 0.

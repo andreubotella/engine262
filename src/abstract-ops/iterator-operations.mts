@@ -12,6 +12,7 @@ import {
   Q, X,
   Await,
   NormalCompletion,
+  ThrowCompletion,
 } from '../completion.mjs';
 import {
   Assert,
@@ -35,7 +36,7 @@ import {
 /** https://tc39.es/ecma262/#sec-iteration */
 
 /** https://tc39.es/ecma262/#sec-getiterator */
-export function GetIterator(obj, hint, method) {
+export function GetIterator(obj: Value, hint?: 'sync' | 'async') {
   if (!hint) {
     hint = 'sync';
   }
@@ -66,7 +67,7 @@ export function GetIterator(obj, hint, method) {
 }
 
 /** https://tc39.es/ecma262/#sec-iteratornext */
-export function IteratorNext(iteratorRecord, value) {
+export function IteratorNext(iteratorRecord, value): NormalCompletion<ObjectValue> | ThrowCompletion {
   let result;
   if (!value) {
     result = Q(Call(iteratorRecord.NextMethod, iteratorRecord.Iterator));
@@ -92,7 +93,7 @@ export function IteratorValue(iterResult) {
 }
 
 /** https://tc39.es/ecma262/#sec-iteratorstep */
-export function IteratorStep(iteratorRecord) {
+export function IteratorStep(iteratorRecord): NormalCompletion<BooleanValue | ObjectValue> | ThrowCompletion {
   const result = Q(IteratorNext(iteratorRecord));
   const done = Q(IteratorComplete(result));
   if (done === Value.true) {
@@ -182,7 +183,7 @@ export function* AsyncIteratorClose(iteratorRecord, completion) {
 }
 
 /** https://tc39.es/ecma262/#sec-createiterresultobject */
-export function CreateIterResultObject(value, done) {
+export function CreateIterResultObject(value: Value, done: BooleanValue) {
   Assert(done instanceof BooleanValue);
   const obj = OrdinaryObjectCreate(surroundingAgent.intrinsic('%Object.prototype%'));
   X(CreateDataProperty(obj, Value('value'), value));

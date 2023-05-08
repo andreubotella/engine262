@@ -1,4 +1,6 @@
-import { BooleanValue, JSStringValue, NullValue, UndefinedValue, Value } from './value.mjs';
+import {
+  BooleanValue, JSStringValue, NullValue, UndefinedValue, Value,
+} from './value.mjs';
 import {
   EnsureCompletion,
   NormalCompletion,
@@ -38,7 +40,7 @@ export const FEATURES = [
     flag: 'is-usv-string',
     url: 'https://github.com/tc39/proposal-is-usv-string',
   },
-] as const
+] as const;
 Object.freeze(FEATURES);
 FEATURES.map(Object.freeze);
 export type ValidFeatures = typeof FEATURES[number]['flag'];
@@ -160,7 +162,7 @@ export class Agent {
     }
     const messageF = messages[template];
     // @ts-expect-error ts cannot understand this
-    const message = messageF(...templateArgs)
+    const message = messageF(...templateArgs);
     const cons = this.currentRealmRecord.Intrinsics[`%${type}%`];
     let error;
     if (type === 'AggregateError') {
@@ -212,7 +214,7 @@ export function setSurroundingAgent(a: Agent) {
   surroundingAgent = a;
 }
 
-export interface CodeEvaluationState {}
+export type CodeEvaluationState = Generator;
 /** https://tc39.es/ecma262/#sec-execution-contexts */
 export class ExecutionContext {
   codeEvaluationState: CodeEvaluationState;
@@ -228,7 +230,7 @@ export class ExecutionContext {
   // NON-SPEC
   readonly callSite = new CallSite(this);
   promiseCapability: PromiseCapabilityRecord;
-  readonly poppedForTailCall = false;
+  poppedForTailCall = false;
 
   copy() {
     const e = new ExecutionContext();

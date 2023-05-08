@@ -2,7 +2,7 @@ import {
   surroundingAgent,
 } from '../engine.mjs';
 import {
-  AbstractRelationalComparison,
+  IsLessThan,
   Call,
   GetMethod,
   GetValue,
@@ -96,7 +96,7 @@ export function* Evaluate_RelationalExpression(expr) {
   switch (operator) {
     case '<': {
       // 5. Let r be the result of performing Abstract Relational Comparison lval < rval.
-      const r = AbstractRelationalComparison(lval, rval);
+      const r = IsLessThan(lval, rval);
       // 6. ReturnIfAbrupt(r).
       ReturnIfAbrupt(r);
       // 7. If r is undefined, return false. Otherwise, return r.
@@ -107,7 +107,7 @@ export function* Evaluate_RelationalExpression(expr) {
     }
     case '>': {
       // 5. Let r be the result of performing Abstract Relational Comparison rval < lval with LeftFirst equal to false.
-      const r = AbstractRelationalComparison(rval, lval, false);
+      const r = IsLessThan(rval, lval, false);
       // 6. ReturnIfAbrupt(r).
       ReturnIfAbrupt(r);
       // 7. If r is undefined, return false. Otherwise, return r.
@@ -118,7 +118,7 @@ export function* Evaluate_RelationalExpression(expr) {
     }
     case '<=': {
       // 5. Let r be the result of performing Abstract Relational Comparison rval < lval with LeftFirst equal to false.
-      const r = AbstractRelationalComparison(rval, lval, false);
+      const r = IsLessThan(rval, lval, false);
       // 6. ReturnIfAbrupt(r).
       ReturnIfAbrupt(r);
       // 7. If r is true or undefined, return false. Otherwise, return true.
@@ -129,7 +129,7 @@ export function* Evaluate_RelationalExpression(expr) {
     }
     case '>=': {
       // 5. Let r be the result of performing Abstract Relational Comparison lval < rval.
-      const r = AbstractRelationalComparison(lval, rval);
+      const r = IsLessThan(lval, rval);
       // 6. ReturnIfAbrupt(r).
       ReturnIfAbrupt(r);
       // 7. If r is true or undefined, return false. Otherwise, return true.

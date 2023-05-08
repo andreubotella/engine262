@@ -243,7 +243,7 @@ export function* GeneratorYield(iterNextObj) {
 }
 
 /** https://tc39.es/ecma262/#sec-yield */
-export function* Yield(value) {
+export function* Yield(value: Value) {
   // 1. Let generatorKind be GetGeneratorKind().
   const generatorKind = GetGeneratorKind();
   // 2. If generatorKind is async, return ? AsyncGeneratorYield(? Await(value)).

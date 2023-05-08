@@ -6,6 +6,7 @@ import {
   type NativeFunction,
   type FunctionObject,
   type BuiltinFunctionObject,
+  type NativeConstructor,
 } from '../abstract-ops/all.mjs';
 import {
   Descriptor,
@@ -21,13 +22,13 @@ import {
 import { X } from '../completion.mjs';
 import { isArray } from '../helpers.mjs';
 
-export type AssignedProp = [
+export type AssignedProp = readonly [
   name: string | PropertyKeyValue,
-  impl: NativeFunction | FunctionObject | [
-    getter: NativeFunction | FunctionObject | UndefinedValue,
-    setter: NativeFunction | FunctionObject | UndefinedValue
+  impl: NativeFunction | NativeConstructor | Value | readonly [
+    getter: NativeFunction | NativeConstructor | FunctionObject | UndefinedValue,
+    setter: NativeFunction | NativeConstructor | FunctionObject | UndefinedValue
   ],
-  length: number,
+  length?: number,
   descriptor?: Partial<DescriptorInit>
 ];
 
@@ -83,10 +84,10 @@ export function assignProps(realmRec: Realm, obj: ObjectValue, props: readonly A
       // Every other data property described in clauses 18 through 26 and in
       // Annex B.2 has the attributes { [[Writable]]: true, [[Enumerable]]:
       // false, [[Configurable]]: true } unless otherwise specified.
-      let value: FunctionObject;
+      let value: Value;
       if (typeof v === 'function') {
         Assert(typeof len === 'number');
-        value = CreateBuiltinFunction(v, len, name, [], realmRec);
+        value = CreateBuiltinFunction(v as NativeConstructor | NativeFunction, len, name, [], realmRec);
       } else {
         value = v;
       }
@@ -119,7 +120,7 @@ export function bootstrapPrototype(realmRec: Realm, props: readonly AssignedProp
   return proto;
 }
 
-export function bootstrapConstructor(realmRec: Realm, Constructor: NativeFunction, name: string, length: number, Prototype: ObjectValue, props: readonly AssignedProp[] = []): BuiltinFunctionObject {
+export function bootstrapConstructor(realmRec: Realm, Constructor: NativeConstructor, name: string, length: number, Prototype: ObjectValue, props: readonly AssignedProp[] = []): BuiltinFunctionObject {
   const cons = CreateBuiltinFunction(
     Constructor,
     length,

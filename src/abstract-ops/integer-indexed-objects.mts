@@ -2,6 +2,7 @@ import {
   Value, NumberValue, SymbolValue, JSStringValue, Descriptor, ObjectValue, type WithPrototype, type WithExtensible, UndefinedValue, NullValue,
 } from '../value.mjs';
 import { Q, X } from '../completion.mjs';
+import type { Mutable } from '../helpers.mjs';
 import {
   Assert,
   CanonicalNumericIndexString,
@@ -26,13 +27,12 @@ import {
   F,
   type ArrayBufferObject,
 } from './all.mjs';
-import type { Mutable } from '../helpers.mjs';
 
 /** https://tc39.es/ecma262/#integer-indexed-exotic-object */
 export interface IntegerIndexedExoticObject extends ObjectValue, WithPrototype, WithExtensible {
-  readonly ViewedArrayBuffer: ArrayBufferObject | UndefinedValue | NullValue;
+  readonly ViewedArrayBuffer: ArrayBufferObject;
   readonly TypedArrayName: JSStringValue | UndefinedValue;
-  readonly ArrayLength: NumberValue | UndefinedValue;
+  readonly ArrayLength: number;
   readonly ByteLength: NumberValue | UndefinedValue;
   readonly ByteOffset: NumberValue | UndefinedValue;
   readonly ContentType: 'BigInt' | 'Number';
@@ -342,7 +342,7 @@ export function IntegerIndexedObjectCreate(prototype) {
   ];
   // 2. Let A be ! MakeBasicObject(internalSlotsList).
   const A = X(MakeBasicObject(internalSlotsList)) as Mutable<IntegerIndexedExoticObject>;
-  A[Symbol.toStringTag] = 'IntegerIndexedExoticObject'
+  A[Symbol.toStringTag] = 'IntegerIndexedExoticObject';
   // 3. Set A.[[GetOwnProperty]] as specified in 9.4.5.1.
   A.GetOwnProperty = IntegerIndexedGetOwnProperty;
   // 4. Set A.[[HasProperty]] as specified in 9.4.5.2.

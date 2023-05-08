@@ -1,5 +1,6 @@
 import { surroundingAgent } from './engine.mjs';
 import { OutOfRange } from './helpers.mjs';
+import type { ParseNode } from './parser/BaseParser.mjs';
 import {
   Evaluate_Script,
   Evaluate_ScriptBody,
@@ -73,7 +74,7 @@ import {
   Evaluate_ExpressionBody,
 } from './runtime-semantics/all.mjs';
 
-export function* Evaluate(node) {
+export function* Evaluate(node: ParseNode) {
   surroundingAgent.runningExecutionContext.callSite.setLocation(node);
 
   if (surroundingAgent.hostDefinedOptions.onNodeEvaluation) {

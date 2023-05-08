@@ -21,7 +21,7 @@ import {
   IsCallable,
   IsConcatSpreadable,
   Set,
-  SortCompare,
+  CompareArrayElements,
   LengthOfArrayLike,
   OrdinaryObjectCreate,
   ToBoolean,
@@ -395,7 +395,7 @@ function ArrayProto_sort([comparefn = Value.undefined], { thisValue }) {
   const obj = Q(ToObject(thisValue));
   const len = Q(LengthOfArrayLike(obj));
 
-  return ArrayProto_sortBody(obj, len, (x, y) => SortCompare(x, y, comparefn));
+  return ArrayProto_sortBody(obj, len, (x, y) => CompareArrayElements(x, y, comparefn));
 }
 
 /** https://tc39.es/ecma262/#sec-array.prototype.splice */

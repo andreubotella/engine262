@@ -46,7 +46,7 @@ export function DaysInYear(_y: NumberValue): NumberValue {
   if (mod(y, 400) === 0) {
     return F(366);
   }
-  Assert(false, 'Unreachable')
+  Assert(false, 'Unreachable');
 }
 
 export function DayFromYear(_y: NumberValue): NumberValue {

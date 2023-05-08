@@ -1,5 +1,7 @@
 import { surroundingAgent } from '../engine.mjs';
-import { ObjectValue, Value, NumberValue } from '../value.mjs';
+import {
+  ObjectValue, Value, NumberValue, BooleanValue,
+} from '../value.mjs';
 import {
   NormalCompletion, Q, ThrowCompletion, X, unused,
 } from '../completion.mjs';
@@ -26,6 +28,7 @@ import {
   GetPrototypeFromConstructor,
   AllocateArrayBuffer,
   type ConstructorObject,
+  type ArgumentList,
 } from './all.mjs';
 
 export const typedArrayInfoByName = {
@@ -128,7 +131,7 @@ export function ValidateTypedArray(O: Value): unused | ThrowCompletion {
 }
 
 // #typedarray-create
-export function TypedArrayCreate(constructor: ConstructorObject, argumentList: readonly Value[]) {
+export function TypedArrayCreate(constructor: ConstructorObject, argumentList: ArgumentList) {
   // 1. Let newTypedArray be ? Construct(constructor, argumentList).
   const newTypedArray = Q(Construct(constructor, argumentList));
   // 2. Perform ? ValidateTypedArray(newTypedArray).
@@ -248,5 +251,18 @@ export function IterableToList(items, method) {
     }
   }
   // 5. Return values.
+  return values;
+}
+
+export function IteratorToList(iteratorRecord: IteratorRecord): NormalCompletion<Value[]> | ThrowCompletion {
+  const values: Value[] = [];
+  let next: BooleanValue | ObjectValue = Value.true;
+  while (next !== Value.false) {
+    next = Q(IteratorStep(iteratorRecord));
+    if (next !== Value.false) {
+      const nextValue = Q(IteratorValue(next));
+      values.push(nextValue);
+    }
+  }
   return values;
 }

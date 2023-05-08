@@ -69,6 +69,9 @@ abstract class Value {
     return Value(value);
   }
 
+  // This is a ghost property prevents TypeScript thinks Value is an empty object.
+  declare readonly __brand?: 'Value';
+
   static declare readonly null: NullValue;
   static declare readonly undefined: UndefinedValue;
   static declare readonly true: BooleanValue;
@@ -860,8 +863,14 @@ export class DataBlock extends Uint8Array {
     }
   }
 }
+export class SharedDataBlock {
+  todo = 'todo';
+  constructor() {
+    throw new Error('TODO: SharedDataBlock');
+  }
+}
 
-export type LanguageType = "Undefined" | "Null" | "Boolean" | "String" | "Symbol" | "Number" | "BigInt" | "Object";
+export type LanguageType = 'Undefined' | 'Null' | 'Boolean' | 'String' | 'Symbol' | 'Number' | 'BigInt' | 'Object';
 export function Type(val: Value) {
   if (val instanceof UndefinedValue) {
     return 'Undefined';

@@ -25,21 +25,23 @@ import {
   ToBoolean,
   isECMAScriptFunctionObject,
 } from './abstract-ops/all.mjs';
-import { NormalCompletion, Q, ThrowCompletion, X } from './completion.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X, unused,
+} from './completion.mjs';
 import { ValueMap } from './helpers.mjs';
 
 /** https://tc39.es/ecma262/#sec-environment-records */
 export abstract class EnvironmentRecord {
-  abstract HasBinding(N: JSStringValue): BooleanValue;
-  abstract CreateMutableBinding(N: JSStringValue, D: BooleanValue): void;
-  abstract CreateImmutableBinding(N: JSStringValue, S: BooleanValue): void;
-  abstract InitializeBinding(N: JSStringValue, V: Value): void;
-  abstract SetMutableBinding(N: JSStringValue, V: Value, S: BooleanValue): NormalCompletion<UndefinedValue> | ThrowCompletion;
+  abstract HasBinding(N: JSStringValue): NormalCompletion<BooleanValue> | ThrowCompletion;
+  abstract CreateMutableBinding(N: JSStringValue, D: BooleanValue): NormalCompletion<void> | ThrowCompletion;
+  abstract CreateImmutableBinding(N: JSStringValue, S: BooleanValue): NormalCompletion<void> | ThrowCompletion;
+  abstract InitializeBinding(N: JSStringValue, V: Value): NormalCompletion<void> | ThrowCompletion;
+  abstract SetMutableBinding(N: JSStringValue, V: Value, S: BooleanValue): NormalCompletion<void> | ThrowCompletion;
   abstract GetBindingValue(N: JSStringValue, S: BooleanValue): NormalCompletion | ThrowCompletion;
-  abstract DeleteBinding(N: JSStringValue): BooleanValue;
+  abstract DeleteBinding(N: JSStringValue): NormalCompletion<BooleanValue> | ThrowCompletion;
   abstract HasThisBinding(): BooleanValue;
   abstract HasSuperBinding(): BooleanValue;
-  abstract WithBaseObject(): Value | undefined;
+  abstract WithBaseObject(): ObjectValue | undefined;
 
   OuterEnv: EnvironmentRecord | NullValue = Value.null;
 

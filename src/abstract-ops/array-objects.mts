@@ -10,15 +10,14 @@ import {
   UndefinedValue,
   NumberValue,
   type WithPrototype,
-  type DataDescriptor,
   type WithExtensible,
 } from '../value.mjs';
 import {
   NormalCompletion, Q, ThrowCompletion, X,
 } from '../completion.mjs';
-import { CastType } from '../helpers.mjs';
+import { CastType, type Mutable } from '../helpers.mjs';
 import {
-  AbstractRelationalComparison,
+  IsLessThan,
   Assert,
   Call,
   Construct,
@@ -39,13 +38,14 @@ import {
   ToNumber,
   ToString,
   ToUint32,
-  IsPropertyKey,
   isArrayIndex,
   isNonNegativeInteger,
-  Yield,
   F,
   type FunctionObject,
   type ConstructorObject,
+  type IntegerIndexedExoticObject,
+  GeneratorYield,
+  CreateIterResultObject,
 } from './all.mjs';
 
 /** https://tc39.es/ecma262/#array-exotic-object */
@@ -57,26 +57,26 @@ export interface ArrayExoticObject extends ObjectValue, WithPrototype, WithExten
 function ArrayDefineOwnProperty(this: ArrayExoticObject, P: PropertyKeyValue, Desc: Descriptor): NormalCompletion<BooleanValue> | ThrowCompletion {
   const A = this;
 
-  Assert(IsPropertyKey(P));
   if (P instanceof JSStringValue && P.stringValue() === 'length') {
     return Q(ArraySetLength(A, Desc));
   } else if (isArrayIndex(P)) {
-    const oldLenDesc = OrdinaryGetOwnProperty(A, Value('length'));
-    Assert(X(IsDataDescriptor(oldLenDesc)));
-    CastType<DataDescriptor>(oldLenDesc);
-    Assert(oldLenDesc.Configurable === Value.false);
-    const oldLen = oldLenDesc.Value;
+    const lengthDesc = OrdinaryGetOwnProperty(A, Value('length'));
+    Assert(IsDataDescriptor(lengthDesc));
+    Assert(lengthDesc.Configurable === Value.false);
+    const length = lengthDesc.Value;
+    Assert(isNonNegativeInteger(length));
+    CastType<NumberValue>(length);
     const index = X(ToUint32(P));
-    if (index.numberValue() >= oldLen.numberValue() && oldLenDesc.Writable === Value.false) {
+    if (index.numberValue() >= length.numberValue() && lengthDesc.Writable === Value.false) {
       return Value.false;
     }
-    const succeeded = X(OrdinaryDefineOwnProperty(A, P, Desc));
+    let succeeded = X(OrdinaryDefineOwnProperty(A, P, Desc));
     if (succeeded === Value.false) {
       return Value.false;
     }
-    if (index.numberValue() >= oldLen.numberValue()) {
-      oldLenDesc.Value = F(index.numberValue() + 1);
-      const succeeded = OrdinaryDefineOwnProperty(A, Value('length'), oldLenDesc); // eslint-disable-line no-shadow
+    if (index.numberValue() >= length.numberValue()) {
+      lengthDesc.Value = F(index.numberValue() + 1);
+      succeeded = X(OrdinaryDefineOwnProperty(A, Value('length'), lengthDesc));
       Assert(succeeded === Value.true);
     }
     return Value.true;
@@ -100,7 +100,7 @@ export function ArrayCreate(length: number, proto?: ObjectValue): NormalCompleti
   if (proto === undefined) {
     proto = surroundingAgent.intrinsic('%Array.prototype%') as ObjectValue;
   }
-  const A = X(MakeBasicObject(['Prototype', 'Extensible'])) as ArrayExoticObject;
+  const A = X(MakeBasicObject(['Prototype', 'Extensible'])) as Mutable<ArrayExoticObject>;
   A[Symbol.toStringTag] = 'ArrayExoticObject';
   A.Prototype = proto;
   A.DefineOwnProperty = ArrayDefineOwnProperty;
@@ -117,7 +117,7 @@ export function ArrayCreate(length: number, proto?: ObjectValue): NormalCompleti
 
 /** https://tc39.es/ecma262/#sec-arrayspeciescreate */
 export function ArraySpeciesCreate(originalArray: ObjectValue, length: number): NormalCompletion<ObjectValue> | ThrowCompletion {
-  Assert(typeof length === 'number' && Number.isInteger(length) && length >= 0);
+  Assert(isNonNegativeInteger(length));
   if (Object.is(length, -0)) {
     length = +0;
   }
@@ -151,9 +151,9 @@ export function ArraySpeciesCreate(originalArray: ObjectValue, length: number): 
 }
 
 /** https://tc39.es/ecma262/#sec-arraysetlength */
-export function ArraySetLength(A: ObjectValue, Desc: Descriptor): NormalCompletion<BooleanValue> | ThrowCompletion {
+export function ArraySetLength(A: ArrayExoticObject, Desc: Descriptor): NormalCompletion<BooleanValue> | ThrowCompletion {
   if (Desc.Value === undefined) {
-    return OrdinaryDefineOwnProperty(A, Value('length'), Desc);
+    return X(OrdinaryDefineOwnProperty(A, Value('length'), Desc));
   }
   const newLenDesc = Descriptor({ ...Desc });
   const newLen = Q(ToUint32(Desc.Value)).numberValue();
@@ -163,10 +163,9 @@ export function ArraySetLength(A: ObjectValue, Desc: Descriptor): NormalCompleti
   }
   newLenDesc.Value = F(newLen);
   const oldLenDesc = OrdinaryGetOwnProperty(A, Value('length'));
-  Assert(X(IsDataDescriptor(oldLenDesc)));
-  CastType<DataDescriptor>(oldLenDesc);
+  Assert(IsDataDescriptor(oldLenDesc));
   Assert(oldLenDesc.Configurable === Value.false);
-  const oldLen = oldLenDesc.Value.numberValue();
+  const oldLen = (oldLenDesc.Value as NumberValue).numberValue();
   if (newLen >= oldLen) {
     return OrdinaryDefineOwnProperty(A, Value('length'), newLenDesc);
   }
@@ -180,16 +179,16 @@ export function ArraySetLength(A: ObjectValue, Desc: Descriptor): NormalCompleti
     newWritable = false;
     newLenDesc.Writable = Value.true;
   }
-  const succeeded = X(OrdinaryDefineOwnProperty(A, Value('length'), newLenDesc));
+  let succeeded = X(OrdinaryDefineOwnProperty(A, Value('length'), newLenDesc));
   if (succeeded === Value.false) {
     return Value.false;
   }
   const keys: JSStringValue[] = [];
-  A.properties.forEach((value, key) => {
+  A.properties.forEach((_value, key) => {
     if (isArrayIndex(key)) {
       CastType<JSStringValue>(key);
-      if (Number((key as JSStringValue).stringValue()) >= newLen) {
-        keys.push(key as JSStringValue);
+      if (Number(key.stringValue()) >= newLen) {
+        keys.push(key);
       }
     }
   });
@@ -206,8 +205,8 @@ export function ArraySetLength(A: ObjectValue, Desc: Descriptor): NormalCompleti
     }
   }
   if (newWritable === false) {
-    const s = OrdinaryDefineOwnProperty(A, Value('length'), Descriptor({ Writable: Value.false }));
-    Assert(s === Value.true);
+    succeeded = X(OrdinaryDefineOwnProperty(A, Value('length'), Descriptor({ Writable: Value.false })));
+    Assert(succeeded === Value.true);
   }
   return Value.true;
 }
@@ -225,7 +224,7 @@ export function IsConcatSpreadable(O: Value): NormalCompletion<BooleanValue> | T
 }
 
 /** https://tc39.es/ecma262/#sec-comparearrayelements */
-export function SortCompare(x: Value, y: Value, comparefn: FunctionObject | UndefinedValue): NumberValue {
+export function CompareArrayElements(x: Value, y: Value, comparefn: FunctionObject | UndefinedValue): NormalCompletion<NumberValue> | ThrowCompletion {
   // 1. If x and y are both undefined, return +0𝔽.
   if (x === Value.undefined && y === Value.undefined) {
     return F(+0);
@@ -253,14 +252,14 @@ export function SortCompare(x: Value, y: Value, comparefn: FunctionObject | Unde
   const xString = Q(ToString(x));
   // 6. Let yString be ? ToString(y).
   const yString = Q(ToString(y));
-  // 7. Let xSmaller be the result of performing Abstract Relational Comparison xString < yString.
-  const xSmaller = AbstractRelationalComparison(xString, yString);
+  // 7. Let xSmaller be ! IsLessThan(xString, yString, true).
+  const xSmaller = X(IsLessThan(xString, yString, true));
   // 8. If xSmaller is true, return -1𝔽.
   if (xSmaller === Value.true) {
     return F(-1);
   }
-  // 9. Let ySmaller be the result of performing Abstract Relational Comparison yString < xString.
-  const ySmaller = AbstractRelationalComparison(yString, xString);
+  // 9. Let ySmaller be ! IsLessThan(yString, xString, true).
+  const ySmaller = X(IsLessThan(yString, xString, true));
   // 10. If ySmaller is true, return 1𝔽.
   if (ySmaller === Value.true) {
     return F(1);
@@ -271,11 +270,7 @@ export function SortCompare(x: Value, y: Value, comparefn: FunctionObject | Unde
 
 /** https://tc39.es/ecma262/#sec-createarrayiterator */
 export function CreateArrayIterator(array: ObjectValue, kind: 'key+value' | 'key' | 'value') {
-  // 1. Assert: Type(array) is Object.
-  Assert(array instanceof ObjectValue);
-  // 2. Assert: kind is key+value, key, or value.
-  Assert(kind === 'key+value' || kind === 'key' || kind === 'value');
-  // 3. Let closure be a new Abstract Closure with no parameters that captures kind and array and performs the following steps when called:
+  // 1. Let closure be a new Abstract Closure with no parameters that captures kind and array and performs the following steps when called:
   const closure = function* closure() {
     // a. Let index be 0.
     let index = 0;
@@ -284,6 +279,7 @@ export function CreateArrayIterator(array: ObjectValue, kind: 'key+value' | 'key
       let len;
       // i. If array has a [[TypedArrayName]] internal slot, then
       if ('TypedArrayName' in array) {
+        CastType<IntegerIndexedExoticObject>(array);
         // 1. If IsDetachedBuffer(array.[[ViewedArrayBuffer]]) is true, throw a TypeError exception.
         if (IsDetachedBuffer(array.ViewedArrayBuffer) === Value.true) {
           return surroundingAgent.Throw('TypeError', 'ArrayBufferDetached');
@@ -298,22 +294,24 @@ export function CreateArrayIterator(array: ObjectValue, kind: 'key+value' | 'key
       if (index >= len) {
         return Value.undefined;
       }
-      // iv. If kind is key, perform ? Yield(𝔽(index)).
+      // iv. If kind is key, perform ? GeneratorYield(CreateIterResultObject(𝔽(index), false)).
       if (kind === 'key') {
-        Q(yield* Yield(F(index)));
+        Q(GeneratorYield(CreateIterResultObject(F(index), Value.false)));
       } else { // v. Else,
         // 1. Let elementKey be ! ToString(𝔽(index)).
         const elementKey = X(ToString(F(index)));
         // 2. Let elementValue be ? Get(array, elementKey).
         const elementValue = Q(Get(array, elementKey));
-        // 3. If kind is value, perform ? Yield(elementValue).
+        // 3. If kind is value, perform ? GeneratorYield(CreateIterResultObject(elementValue, false)).
         if (kind === 'value') {
-          Q(yield* Yield(elementValue));
+          Q(yield* GeneratorYield(CreateIterResultObject(elementValue, Value.false)));
         } else { // 4. Else,
           // a. Assert: kind is key+value.
           Assert(kind === 'key+value');
-          // b. Perform ? Yield(! CreateArrayFromList(« 𝔽(index), elementValue »)).
-          Q(yield* Yield(X(CreateArrayFromList([F(index), elementValue]))));
+          // b. Let result be CreateArrayFromList(« 𝔽(index), elementValue »).
+          const result = CreateArrayFromList([F(index), elementValue]);
+          // c. Perform ? GeneratorYield(CreateIterResultObject(result, false)).
+          Q(yield* GeneratorYield(CreateIterResultObject(result, Value.false)));
         }
       }
       // vi. Set index to index + 1.

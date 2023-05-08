@@ -1,8 +1,9 @@
 import { OutOfRange, isArray } from '../helpers.mjs';
+import type { ParseNode } from '../parser/Types.mjs';
 import { JSStringValue, Value } from '../value.mjs';
 import { StringValue } from './all.mjs';
 
-export function BoundNames(node): JSStringValue[] {
+export function BoundNames(node: ParseNode | ParseNode[]): JSStringValue[] {
   if (isArray(node)) {
     const names: JSStringValue[] = [];
     for (const item of node) {

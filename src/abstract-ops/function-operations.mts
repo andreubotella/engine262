@@ -36,6 +36,7 @@ import {
 import { unwind, type Mutable, CastType } from '../helpers.mjs';
 import type { ScriptRecord } from '../parse.mjs';
 import type { AbstractModuleRecord } from '../modules.mjs';
+import type { ParseNode } from '../parser/Types.mjs';
 import {
   Assert,
   Call,
@@ -61,22 +62,27 @@ import {
 // This file covers abstract operations defined in
 /** https://tc39.es/ecma262/#sec-ecmascript-function-objects */
 export interface FunctionObject extends ObjectValue, WithPrototype, WithExtensible {
-  Call(thisArgument: Value, argumentsList: readonly Value[]): NormalCompletion | ThrowCompletion;
-  Construct(argumentsList: readonly Value[], newTarget: ConstructorObject): NormalCompletion<ObjectValue> | ThrowCompletion;
+  Call(thisArgument: Value, argumentsList: ArgumentList): NormalCompletion | ThrowCompletion;
+  Construct(argumentsList: ArgumentList, newTarget: ConstructorObject): NormalCompletion<ObjectValue> | ThrowCompletion;
   readonly [Symbol.toStringTag]: 'ECMAScriptFunctionObject' | 'BuiltinFunctionObject' | 'ProxyExoticObject' | 'BoundFunctionExoticObject'
 }
 export interface NativeFunctionContext {
   thisValue: ObjectValue | UndefinedValue;
-  NewTarget: ObjectValue | UndefinedValue;
+  NewTarget: ConstructorObject | UndefinedValue;
 }
-
-export type NativeFunction = (argumentList: readonly Value[], context: NativeFunctionContext) => NormalCompletion | ThrowCompletion;
+export interface NativeConstructorContext {
+  thisValue: ObjectValue | UndefinedValue;
+  NewTarget: ConstructorObject;
+}
+export type ArgumentList = readonly Value[];
+export type NativeFunction = (argumentList: ArgumentList, context: NativeFunctionContext) => NormalCompletion | ThrowCompletion;
+export type NativeConstructor = (argumentList: ArgumentList, context: NativeConstructorContext) => NormalCompletion<ObjectValue> | ThrowCompletion;
 
 export interface BuiltinFunctionObject extends FunctionObject {
   readonly InitialName: JSStringValue;
   readonly Realm: Realm;
   readonly ScriptOrModule: ScriptRecord | AbstractModuleRecord;
-  readonly nativeFunction: NativeFunction;
+  readonly nativeFunction: NativeFunction | NativeConstructor;
   readonly [Symbol.toStringTag]: 'BuiltinFunctionObject'
 }
 export interface ECMAScriptFunctionObject extends FunctionObject {
@@ -88,7 +94,7 @@ export interface ECMAScriptFunctionObject extends FunctionObject {
   readonly Realm: Realm;
   readonly ScriptOrModule: ScriptRecord | AbstractModuleRecord;
   readonly ThisMode: 'lexical' | 'strict' | 'global';
-  readonly Strict: BooleanValue;
+  readonly Strict: boolean;
   HomeObject: ObjectValue;
   readonly SourceText: string;
   readonly Fields: readonly ClassFieldDefinitionRecord[];
@@ -181,7 +187,7 @@ export function OrdinaryCallBindThis(F: FunctionObject, calleeContext: Execution
 }
 
 /** https://tc39.es/ecma262/#sec-ordinarycallevaluatebody */
-export function OrdinaryCallEvaluateBody(F: FunctionObject, argumentsList: readonly Value[]): NormalCompletionObject<Value> | AbruptCompletion {
+export function OrdinaryCallEvaluateBody(F: FunctionObject, argumentsList: ArgumentList): NormalCompletionObject<Value> | AbruptCompletion {
   // 1. Return the result of EvaluateBody of the parsed code that is F.[[ECMAScriptCode]] passing F and argumentsList as the arguments.
   return EnsureCompletion(unwind(EvaluateBody(F.ECMAScriptCode, F, argumentsList)));
 }
@@ -231,7 +237,7 @@ export function InitializeInstanceElements(O: ObjectValue, constructor: ECMAScri
 }
 
 /** https://tc39.es/ecma262/#sec-ecmascript-function-objects-call-thisargument-argumentslist */
-function FunctionCallSlot(this: ECMAScriptFunctionObject, thisArgument: Value, argumentsList: readonly Value[]): NormalCompletion | ThrowCompletion {
+function FunctionCallSlot(this: ECMAScriptFunctionObject, thisArgument: Value, argumentsList: ArgumentList): NormalCompletion | ThrowCompletion {
   const F = this;
 
   // 1. Assert: F is an ECMAScript function object.
@@ -268,7 +274,7 @@ function FunctionCallSlot(this: ECMAScriptFunctionObject, thisArgument: Value, a
 }
 
 /** https://tc39.es/ecma262/#sec-ecmascript-function-objects-construct-argumentslist-newtarget */
-function FunctionConstructSlot(this: ECMAScriptFunctionObject, argumentsList: readonly Value[], newTarget: ConstructorObject): NormalCompletion<ObjectValue> | ThrowCompletion {
+function FunctionConstructSlot(this: ECMAScriptFunctionObject, argumentsList: ArgumentList, newTarget: ConstructorObject): NormalCompletion<ObjectValue> | ThrowCompletion {
   const F = this;
 
   // 1. Assert: F is an ECMAScript function object.
@@ -332,7 +338,7 @@ function FunctionConstructSlot(this: ECMAScriptFunctionObject, argumentsList: re
 }
 
 /** https://tc39.es/ecma262/#sec-functionallocate */
-export function OrdinaryFunctionCreate(functionPrototype: ObjectValue, sourceText: string, ParameterList, Body, thisMode: 'lexical-this' | 'non-lexical-this', Scope: EnvironmentRecord, PrivateScope: PrivateEnvironmentRecord | NullValue): FunctionObject {
+export function OrdinaryFunctionCreate(functionPrototype: ObjectValue, sourceText: string, ParameterList: ParseNode, Body: ParseNode, thisMode: 'lexical-this' | 'non-lexical-this', Scope: EnvironmentRecord, PrivateScope: PrivateEnvironmentRecord | NullValue): FunctionObject {
   // 1. Assert: Type(functionPrototype) is Object.
   Assert(functionPrototype instanceof ObjectValue);
   // 2. Let internalSlotsList be the internal slots listed in Table 33.
@@ -355,7 +361,7 @@ export function OrdinaryFunctionCreate(functionPrototype: ObjectValue, sourceTex
   ];
   // 3. Let F be ! OrdinaryObjectCreate(functionPrototype, internalSlotsList).
   const F = X(OrdinaryObjectCreate(functionPrototype, internalSlotsList)) as Mutable<ECMAScriptFunctionObject>;
-  F[Symbol.toStringTag] = 'ECMAScriptFunctionObject'
+  F[Symbol.toStringTag] = 'ECMAScriptFunctionObject';
   // 4. Set F.[[Call]] to the definition specified in 10.2.1.
   F.Call = surroundingAgent.hostDefinedOptions.boost?.callFunction || FunctionCallSlot;
   // 5. Set F.[[SourceText]] to sourceText.
@@ -504,14 +510,20 @@ export function SetFunctionLength(F: FunctionObject, length: number): unused {
 }
 
 
-function nativeCall(F: BuiltinFunctionObject, argumentsList: readonly Value[], thisArgument: ObjectValue | UndefinedValue, newTarget: ObjectValue | UndefinedValue) {
-  return F.nativeFunction(argumentsList, {
+function nativeCall(F: BuiltinFunctionObject, argumentsList: ArgumentList, thisArgument: ObjectValue | UndefinedValue) {
+  return (F.nativeFunction as NativeFunction)(argumentsList, {
     thisValue: thisArgument || Value.undefined,
-    NewTarget: newTarget || Value.undefined,
+    NewTarget: Value.undefined,
+  });
+}
+function nativeConstruct(F: BuiltinFunctionObject, argumentsList: ArgumentList, newTarget: ConstructorObject) {
+  return F.nativeFunction(argumentsList, {
+    thisValue: Value.undefined,
+    NewTarget: newTarget,
   });
 }
 
-function BuiltinFunctionCall(this: BuiltinFunctionObject, thisArgument: ObjectValue | UndefinedValue, argumentsList: readonly Value[]) {
+function BuiltinFunctionCall(this: BuiltinFunctionObject, thisArgument: ObjectValue | UndefinedValue, argumentsList: ArgumentList) {
   const F = this;
 
   // const callerContext = surroundingAgent.runningExecutionContext;
@@ -523,14 +535,14 @@ function BuiltinFunctionCall(this: BuiltinFunctionObject, thisArgument: ObjectVa
   calleeContext.ScriptOrModule = F.ScriptOrModule;
   // 8. Perform any necessary implementation-defined initialization of calleeContext.
   surroundingAgent.executionContextStack.push(calleeContext);
-  const result = nativeCall(F, argumentsList, thisArgument, Value.undefined);
+  const result = nativeCall(F, argumentsList, thisArgument);
   // Remove calleeContext from the execution context stack and
   // restore callerContext as the running execution context.
   surroundingAgent.executionContextStack.pop(calleeContext);
   return result;
 }
 
-function BuiltinFunctionConstruct(this: BuiltinFunctionObject, argumentsList: readonly Value[], newTarget: ObjectValue | UndefinedValue) {
+function BuiltinFunctionConstruct(this: BuiltinFunctionObject, argumentsList: ArgumentList, newTarget: ConstructorObject): NormalCompletion<ObjectValue> | ThrowCompletion {
   const F = this;
 
   // const callerContext = surroundingAgent.runningExecutionContext;
@@ -543,15 +555,16 @@ function BuiltinFunctionConstruct(this: BuiltinFunctionObject, argumentsList: re
   // 8. Perform any necessary implementation-defined initialization of calleeContext.
   surroundingAgent.executionContextStack.push(calleeContext);
   surroundingAgent.runningExecutionContext.callSite.constructCall = true;
-  const result = nativeCall(F, argumentsList, undefined, newTarget);
+  const result = nativeConstruct(F, argumentsList, newTarget);
   // Remove calleeContext from the execution context stack and
   // restore callerContext as the running execution context.
   surroundingAgent.executionContextStack.pop(calleeContext);
+  Assert(result instanceof ObjectValue);
   return result;
 }
 
 /** https://tc39.es/ecma262/#sec-createbuiltinfunction */
-export function CreateBuiltinFunction(steps: NativeFunction, length: number, name: PropertyKeyValue | PrivateName, internalSlotsList: readonly string[], realm?: Realm, prototype?: ObjectValue | NullValue, prefix?: JSStringValue, isConstructor = Value.false): BuiltinFunctionObject {
+export function CreateBuiltinFunction(steps: NativeFunction | NativeConstructor, length: number, name: PropertyKeyValue | PrivateName, internalSlotsList: readonly string[], realm?: Realm, prototype?: ObjectValue | NullValue, prefix?: JSStringValue, isConstructor = Value.false): BuiltinFunctionObject {
   // 1. Assert: steps is either a set of algorithm steps or other definition of a function's behaviour provided in this specification.
   Assert(typeof steps === 'function');
   // 2. If realm is not present, set realm to the current Realm Record.
