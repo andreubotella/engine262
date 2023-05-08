@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Descriptor,
@@ -30,6 +29,7 @@ import {
   ToObject,
   ToString,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { assignProps } from './bootstrap.mjs';
@@ -559,7 +559,7 @@ function ArrayProto_at([index = Value.undefined], { thisValue }) {
   return Q(Get(O, X(ToString(F(k)))));
 }
 
-export function bootstrapArrayPrototype(realmRec) {
+export function bootstrapArrayPrototype(realmRec: Realm) {
   const proto = X(ArrayCreate(0, realmRec.Intrinsics['%Object.prototype%']));
 
   assignProps(realmRec, proto, [

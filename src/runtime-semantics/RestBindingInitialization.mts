@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Value } from '../value.mjs';
 import { surroundingAgent } from '../engine.mjs';
 import {

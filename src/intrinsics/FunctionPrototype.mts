@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   surroundingAgent,
   HostHasSourceTextAvailable,
@@ -20,25 +19,41 @@ import {
   ToIntegerOrInfinity,
   CreateBuiltinFunction,
   MakeBasicObject,
+  Realm,
+  type FunctionObject,
+  type BuiltinFunctionObject,
+  type ECMAScriptFunctionObject,
+  type ConstructorObject,
+  type NativeFunctionContext,
 } from '../abstract-ops/all.mjs';
 import {
   JSStringValue,
   NumberValue,
   ObjectValue,
+  UndefinedValue,
   Value,
   wellKnownSymbols,
 } from '../value.mjs';
-import { Q, X } from '../completion.mjs';
+import { NormalCompletion, Q, ThrowCompletion, X } from '../completion.mjs';
 import { assignProps } from './bootstrap.mjs';
+import { CastType, type Mutable } from '../helpers.mjs';
+
+/** https://tc39.es/ecma262/#sec-boundfunctioncreate */
+export interface BoundFunctionExoticObject extends FunctionObject {
+  readonly BoundTargetFunction: FunctionObject;
+  readonly BoundThis: Value;
+  readonly BoundArguments: readonly Value[];
+  readonly [Symbol.toStringTag]: 'BoundFunctionExoticObject';
+}
 
 /** https://tc39.es/ecma262/#sec-properties-of-the-function-prototype-object */
-function FunctionProto(_args, _meta) {
+function FunctionProto(_args: readonly Value[], _meta: NativeFunctionContext): UndefinedValue {
   // * accepts any arguments and returns undefined when invoked.
   return Value.undefined;
 }
 
 /** https://tc39.es/ecma262/#sec-function.prototype.apply */
-function FunctionProto_apply([thisArg = Value.undefined, argArray = Value.undefined], { thisValue }) {
+function FunctionProto_apply([thisArg = Value.undefined, argArray = Value.undefined]: readonly Value[], { thisValue }: NativeFunctionContext): NormalCompletion | ThrowCompletion {
   // 1. Let func be the this value.
   const func = thisValue;
   // 2. If IsCallable(func) is false, throw a TypeError exception.
@@ -60,7 +75,7 @@ function FunctionProto_apply([thisArg = Value.undefined, argArray = Value.undefi
   return Q(Call(func, thisArg, argList));
 }
 
-function BoundFunctionExoticObjectCall(thisArgument, argumentsList) {
+function BoundFunctionExoticObjectCall(this: BoundFunctionExoticObject, _thisArgument: Value, argumentsList: readonly Value[]): NormalCompletion | ThrowCompletion {
   const F = this;
 
   const target = F.BoundTargetFunction;
@@ -70,7 +85,7 @@ function BoundFunctionExoticObjectCall(thisArgument, argumentsList) {
   return Q(Call(target, boundThis, args));
 }
 
-function BoundFunctionExoticObjectConstruct(argumentsList, newTarget) {
+function BoundFunctionExoticObjectConstruct(this: BoundFunctionExoticObject, argumentsList: readonly Value[], newTarget: ConstructorObject): NormalCompletion<ObjectValue> | ThrowCompletion {
   const F = this;
 
   const target = F.BoundTargetFunction;
@@ -84,7 +99,7 @@ function BoundFunctionExoticObjectConstruct(argumentsList, newTarget) {
 }
 
 /** https://tc39.es/ecma262/#sec-boundfunctioncreate */
-function BoundFunctionCreate(targetFunction, boundThis, boundArgs) {
+function BoundFunctionCreate(targetFunction: FunctionObject, boundThis: Value, boundArgs: readonly Value[]): BoundFunctionExoticObject {
   // 1. Assert: Type(targetFunction) is Object.
   Assert(targetFunction instanceof ObjectValue);
   // 2. Let proto be ? targetFunction.[[GetPrototypeOf]]().
@@ -96,9 +111,10 @@ function BoundFunctionCreate(targetFunction, boundThis, boundArgs) {
     'BoundArguments',
     'Prototype',
     'Extensible',
-  ];
+  ] as const;
   // 4. Let obj be ! MakeBasicObject(internalSlotsList).
-  const obj = X(MakeBasicObject(internalSlotsList));
+  const obj = X(MakeBasicObject(internalSlotsList)) as Mutable<BoundFunctionExoticObject>;
+  obj[Symbol.toStringTag] = 'BoundFunctionExoticObject';
   // 5. Set obj.[[Prototype]] to proto.
   obj.Prototype = proto;
   // 6. Set obj.[[Call]] as described in 9.4.1.1.
@@ -119,13 +135,14 @@ function BoundFunctionCreate(targetFunction, boundThis, boundArgs) {
 }
 
 /** https://tc39.es/ecma262/#sec-function.prototype.bind */
-function FunctionProto_bind([thisArg = Value.undefined, ...args], { thisValue }) {
+function FunctionProto_bind([thisArg = Value.undefined, ...args]: readonly Value[], { thisValue }: NativeFunctionContext) {
   // 1. Let Target be the this value.
   const Target = thisValue;
   // 2. If IsCallable(Target) is false, throw a TypeError exception.
   if (IsCallable(Target) === Value.false) {
     return surroundingAgent.Throw('TypeError', 'ThisNotAFunction', Target);
   }
+  CastType<FunctionObject>(Target)
   // 3. Let F be ? BoundFunctionCreate(Target, thisArg, args).
   const F = Q(BoundFunctionCreate(Target, thisArg, args));
   // 4. Let L be 0.
@@ -164,13 +181,13 @@ function FunctionProto_bind([thisArg = Value.undefined, ...args], { thisValue })
     targetName = Value('');
   }
   // 10. Perform SetFunctionName(F, targetName, "bound").
-  SetFunctionName(F, targetName, Value('bound'));
+  SetFunctionName(F, targetName as JSStringValue, Value('bound'));
   // 11. Return F.
   return F;
 }
 
 /** https://tc39.es/ecma262/#sec-function.prototype.call */
-function FunctionProto_call([thisArg = Value.undefined, ...args], { thisValue }) {
+function FunctionProto_call([thisArg = Value.undefined, ...args]: readonly Value[], { thisValue }: NativeFunctionContext) {
   // 1. Let func be the this value.
   const func = thisValue;
   // 2. If IsCallable(func) is false, throw a TypeError exception.
@@ -178,7 +195,7 @@ function FunctionProto_call([thisArg = Value.undefined, ...args], { thisValue })
     return surroundingAgent.Throw('TypeError', 'ThisNotAFunction', func);
   }
   // 3. Let argList be a new empty List.
-  const argList = [];
+  const argList: Value[] = [];
   // 4. If this method was called with more than one argument, then in left to right order, starting with the second argument, append each argument as the last element of argList.
   for (const arg of args) {
     argList.push(arg);
@@ -190,16 +207,16 @@ function FunctionProto_call([thisArg = Value.undefined, ...args], { thisValue })
 }
 
 /** https://tc39.es/ecma262/#sec-function.prototype.tostring */
-function FunctionProto_toString(args, { thisValue }) {
+function FunctionProto_toString(_args: readonly Value[], { thisValue }: NativeFunctionContext) {
   // 1. Let func be the this value.
   const func = thisValue;
   // 2. If Type(func) is Object and func has a [[SourceText]] internal slot and func.[[SourceText]]
   //    is a sequence of Unicode code points and ! HostHasSourceTextAvailable(func) is true, then
   if (func instanceof ObjectValue
       && 'SourceText' in func
-      && X(HostHasSourceTextAvailable(func)) === Value.true) {
+    && X(HostHasSourceTextAvailable(func as ECMAScriptFunctionObject)) === Value.true) {
     // Return ! UTF16Encode(func.[[SourceText]]).
-    return Value(func.SourceText);
+    return Value((func as ECMAScriptFunctionObject).SourceText);
   }
   // 3. If func is a built-in function object, then return an implementation-defined
   //    String source code representation of func. The representation must have the
@@ -208,6 +225,7 @@ function FunctionProto_toString(args, { thisValue }) {
   //    that would be matched by `NativeFunctionAccessor? PropertyName` must be the
   //    value of func.[[InitialName]].
   if ('nativeFunction' in func) {
+    CastType<BuiltinFunctionObject>(func);
     if (func.InitialName !== Value.null) {
       return Value(`function ${func.InitialName.stringValue()}() { [native code] }`);
     }
@@ -224,14 +242,14 @@ function FunctionProto_toString(args, { thisValue }) {
 }
 
 /** https://tc39.es/ecma262/#sec-function.prototype-@@hasinstance */
-function FunctionProto_hasInstance([V = Value.undefined], { thisValue }) {
+function FunctionProto_hasInstance([V = Value.undefined]: readonly Value[], { thisValue }: NativeFunctionContext) {
   // 1. Let F be this value.
   const F = thisValue;
   // 2. Return ? OrdinaryHasInstance(F, V).
   return Q(OrdinaryHasInstance(F, V));
 }
 
-export function bootstrapFunctionPrototype(realmRec) {
+export function bootstrapFunctionPrototype(realmRec: Realm) {
   const proto = CreateBuiltinFunction(
     FunctionProto,
     0,

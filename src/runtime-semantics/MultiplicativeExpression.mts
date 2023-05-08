@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Q } from '../completion.mjs';
 import { EvaluateStringOrNumericBinaryExpression } from './all.mjs';
 

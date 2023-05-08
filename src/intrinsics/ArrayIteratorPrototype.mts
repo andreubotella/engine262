@@ -1,6 +1,5 @@
-// @ts-nocheck
 import {
-  GeneratorResume,
+  GeneratorResume, Realm,
 } from '../abstract-ops/all.mjs';
 import { Q } from '../completion.mjs';
 import { Value } from '../value.mjs';
@@ -14,7 +13,7 @@ function ArrayIteratorPrototype_next(args, { thisValue }) {
   return Q(GeneratorResume(thisValue, undefined, kArrayIteratorPrototype));
 }
 
-export function bootstrapArrayIteratorPrototype(realmRec) {
+export function bootstrapArrayIteratorPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['next', ArrayIteratorPrototype_next, 0],
   ], realmRec.Intrinsics['%IteratorPrototype%'], 'Array Iterator');

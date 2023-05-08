@@ -1,14 +1,22 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
-import { Q, X } from '../completion.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X,
+} from '../completion.mjs';
 import { AbstractModuleRecord, ResolvedBindingRecord } from '../modules.mjs';
 import {
   SymbolValue,
   Value,
   Descriptor,
   wellKnownSymbols,
+  BooleanValue,
+  ObjectValue,
+  JSStringValue,
+  type PropertyKeyValue,
+  UndefinedValue,
+  NullValue,
+  type WithPrototype,
 } from '../value.mjs';
-import { ValueSet } from '../helpers.mjs';
+import { ValueSet, isArray, type Mutable } from '../helpers.mjs';
 import {
   Assert,
   SortCompare,
@@ -27,21 +35,21 @@ import {
 } from './all.mjs';
 
 
-function ModuleNamespaceSetPrototypeOf(V) {
+function ModuleNamespaceSetPrototypeOf(this: ModuleNamespaceExoticObject, V: Value): BooleanValue {
   const O = this;
 
   return Q(SetImmutablePrototype(O, V));
 }
 
-function ModuleNamespaceIsExtensible() {
+function ModuleNamespaceIsExtensible(): BooleanValue {
   return Value.false;
 }
 
-function ModuleNamespacePreventExtensions() {
+function ModuleNamespacePreventExtensions(): BooleanValue {
   return Value.true;
 }
 
-function ModuleNamespaceGetOwnProperty(P) {
+function ModuleNamespaceGetOwnProperty(this: ModuleNamespaceExoticObject, P: PropertyKeyValue): Descriptor | UndefinedValue {
   const O = this;
 
   if (P instanceof SymbolValue) {
@@ -60,7 +68,7 @@ function ModuleNamespaceGetOwnProperty(P) {
   });
 }
 
-function ModuleNamespaceDefineOwnProperty(P, Desc) {
+function ModuleNamespaceDefineOwnProperty(this: ModuleNamespaceExoticObject, P: PropertyKeyValue, Desc: Descriptor): BooleanValue {
   const O = this;
 
   if (P instanceof SymbolValue) {
@@ -89,7 +97,7 @@ function ModuleNamespaceDefineOwnProperty(P, Desc) {
   return Value.true;
 }
 
-function ModuleNamespaceHasProperty(P) {
+function ModuleNamespaceHasProperty(this: ModuleNamespaceExoticObject, P: PropertyKeyValue) {
   const O = this;
 
   if (P instanceof SymbolValue) {
@@ -103,7 +111,7 @@ function ModuleNamespaceHasProperty(P) {
 }
 
 /** https://tc39.es/ecma262/#sec-module-namespace-exotic-objects-get-p-receiver */
-function ModuleNamespaceGet(P, Receiver) {
+function ModuleNamespaceGet(this: ModuleNamespaceExoticObject, P: PropertyKeyValue, Receiver: Value): NormalCompletion | ThrowCompletion {
   const O = this;
 
   // 1. Assert: IsPropertyKey(P) is true.
@@ -137,18 +145,18 @@ function ModuleNamespaceGet(P, Receiver) {
   // 11. Let targetEnv be targetModule.[[Environment]].
   const targetEnv = targetModule.Environment;
   // 12. If targetEnv is undefined, throw a ReferenceError exception.
-  if (targetEnv === Value.undefined) {
+  if (targetEnv instanceof UndefinedValue) {
     return surroundingAgent.Throw('ReferenceError', 'NotDefined', P);
   }
   // 13. Return ? targetEnv.GetBindingValue(binding.[[BindingName]], true).
   return Q(targetEnv.GetBindingValue(binding.BindingName, Value.true));
 }
 
-function ModuleNamespaceSet() {
+function ModuleNamespaceSet(this: ModuleNamespaceExoticObject): BooleanValue {
   return Value.false;
 }
 
-function ModuleNamespaceDelete(P) {
+function ModuleNamespaceDelete(this: ModuleNamespaceExoticObject, P: PropertyKeyValue): BooleanValue {
   const O = this;
 
   Assert(IsPropertyKey(P));
@@ -162,27 +170,34 @@ function ModuleNamespaceDelete(P) {
   return Value.true;
 }
 
-function ModuleNamespaceOwnPropertyKeys() {
+function ModuleNamespaceOwnPropertyKeys(this: ModuleNamespaceExoticObject): PropertyKeyValue[] {
   const O = this;
 
-  const exports = [...O.Exports];
+  const exports: PropertyKeyValue[] = [...O.Exports];
   const symbolKeys = X(OrdinaryOwnPropertyKeys(O));
   exports.push(...symbolKeys);
   return exports;
 }
 
+export interface ModuleNamespaceExoticObject extends ObjectValue, WithPrototype {
+  readonly Module: AbstractModuleRecord;
+  readonly Exports: ValueSet<JSStringValue>;
+  readonly Prototype: NullValue;
+  readonly [Symbol.toStringTag]: 'ModuleNamespaceExoticObject'
+}
 /** https://tc39.es/ecma262/#sec-modulenamespacecreate */
-export function ModuleNamespaceCreate(module, exports) {
+export function ModuleNamespaceCreate(module: AbstractModuleRecord, exports: readonly JSStringValue[]): ModuleNamespaceExoticObject {
   // 1. Assert: module is a Module Record.
   Assert(module instanceof AbstractModuleRecord);
   // 2. Assert: module.[[Namespace]] is undefined.
   Assert(module.Namespace === Value.undefined);
   // 3. Assert: exports is a List of String values.
-  Assert(Array.isArray(exports));
+  Assert(isArray(exports));
   // 4. Let internalSlotsList be the internal slots listed in Table 31.
-  const internalSlotsList = ['Module', 'Exports', 'Prototype'];
+  const internalSlotsList = ['Module', 'Exports', 'Prototype'] as const;
   // 5. Let M be ! MakeBasicObject(internalSlotsList).
-  const M = X(MakeBasicObject(internalSlotsList));
+  const M = X(MakeBasicObject(internalSlotsList)) as Mutable<ModuleNamespaceExoticObject>;
+  M[Symbol.toStringTag] = 'ModuleNamespaceExoticObject'
   /** https://tc39.es/ecma262/#sec-module-namespace-exotic-objects */
   M.SetPrototypeOf = ModuleNamespaceSetPrototypeOf;
   M.IsExtensible = ModuleNamespaceIsExtensible;

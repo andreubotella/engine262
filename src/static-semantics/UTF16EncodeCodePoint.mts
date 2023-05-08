@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Assert } from '../abstract-ops/all.mjs';
 
 /** https://tc39.es/ecma262/#sec-utf16encodecodepoint */

@@ -17,9 +17,13 @@ import {
   ToUint32,
   Z,
   F,
+  type FunctionObject,
+  type NativeFunction,
 } from './abstract-ops/all.mjs';
 import { EnvironmentRecord } from './environment.mjs';
-import { Completion, X } from './completion.mjs';
+import {
+  Completion, NormalCompletion, ThrowCompletion, X,
+} from './completion.mjs';
 import { ValueMap, OutOfRange, callable } from './helpers.mjs';
 import type { PrivateElementRecord } from './runtime-semantics/MethodDefinitionEvaluation.mjs';
 
@@ -30,13 +34,16 @@ export declare function Value(value: number): NumberValue; // @ts-expect-error c
 export declare function Value(value: bigint): BigIntValue; // @ts-expect-error callable class
 export declare function Value(value: undefined): UndefinedValue; // @ts-expect-error callable class
 export declare function Value(value: null): NullValue; // @ts-expect-error callable class
-// TODO(ts): define a FunctionObjectValue type.
-export declare function Value(value: (...args: unknown[]) => unknown): ObjectValue; // @ts-expect-error callable class
+export declare function Value(value: NativeFunction): FunctionObject; // @ts-expect-error callable class
+export declare function Value<T extends Value>(value: T): T; // @ts-expect-error callable class
 export declare function Value(value: string | number): StringValue | NumberValue;
 /** https://tc39.es/ecma262/#sec-ecmascript-language-types */
 export @callable((_target, _thisArg, [value]) => {
   if (value === null) {
     return Value.null;
+  }
+  if (value instanceof Value) {
+    return value;
   }
   switch (typeof value) {
     case 'undefined':
@@ -48,7 +55,7 @@ export @callable((_target, _thisArg, [value]) => {
     case 'bigint':
       return new BigIntValue(value);
     case 'function':
-      return CreateBuiltinFunction(value, 0, Value(''), []);
+      return CreateBuiltinFunction(value as NativeFunction, 0, Value(''), []);
     default:
       throw new OutOfRange('new Value', value);
   }
@@ -694,6 +701,7 @@ export class PrivateName extends Value {
 
 /** https://tc39.es/ecma262/#sec-object-type */
 export class ObjectValue extends Value {
+  declare [Symbol.toStringTag]: string;
   readonly properties: ValueMap<StringValue | SymbolValue, Descriptor>;
   readonly internalSlotsList: readonly string[];
   readonly PrivateElements: PrivateElementRecord[];
@@ -705,48 +713,48 @@ export class ObjectValue extends Value {
     this.internalSlotsList = internalSlotsList;
   }
 
-  GetPrototypeOf() {
-    return OrdinaryGetPrototypeOf(this);
+  GetPrototypeOf(): NormalCompletion<ObjectValue | NullValue> | ThrowCompletion {
+    return OrdinaryGetPrototypeOf(this as unknown as OrdinaryObject);
   }
 
-  SetPrototypeOf(V: Value) {
-    return OrdinarySetPrototypeOf(this, V);
+  SetPrototypeOf(V: Value): NormalCompletion<BooleanValue> | ThrowCompletion {
+    return OrdinarySetPrototypeOf(this as unknown as OrdinaryObject, V);
   }
 
   IsExtensible() {
-    return OrdinaryIsExtensible(this);
+    return OrdinaryIsExtensible(this as unknown as OrdinaryObject);
   }
 
   PreventExtensions() {
-    return OrdinaryPreventExtensions(this);
+    return OrdinaryPreventExtensions(this as unknown as OrdinaryObject);
   }
 
-  GetOwnProperty(P: PropertyKeyValue) {
-    return OrdinaryGetOwnProperty(this, P);
+  GetOwnProperty(P: PropertyKeyValue): NormalCompletion<UndefinedValue | Descriptor> | ThrowCompletion {
+    return OrdinaryGetOwnProperty(this as unknown as OrdinaryObject, P);
   }
 
-  DefineOwnProperty(P: PropertyKeyValue, Desc: Descriptor) {
-    return OrdinaryDefineOwnProperty(this, P, Desc);
+  DefineOwnProperty(P: PropertyKeyValue, Desc: Descriptor): NormalCompletion<BooleanValue> | ThrowCompletion {
+    return OrdinaryDefineOwnProperty(this as unknown as OrdinaryObject, P, Desc);
   }
 
   HasProperty(P: PropertyKeyValue) {
-    return OrdinaryHasProperty(this, P);
+    return OrdinaryHasProperty(this as unknown as OrdinaryObject, P);
   }
 
   Get(P: PropertyKeyValue, Receiver: Value) {
-    return OrdinaryGet(this, P, Receiver);
+    return OrdinaryGet(this as unknown as OrdinaryObject, P, Receiver);
   }
 
   Set(P: PropertyKeyValue, V: Value, Receiver: Value) {
-    return OrdinarySet(this, P, V, Receiver);
+    return OrdinarySet(this as unknown as OrdinaryObject, P, V, Receiver);
   }
 
-  Delete(P: PropertyKeyValue) {
-    return OrdinaryDelete(this, P);
+  Delete(P: PropertyKeyValue): NormalCompletion<BooleanValue> | ThrowCompletion {
+    return OrdinaryDelete(this as unknown as OrdinaryObject, P);
   }
 
   OwnPropertyKeys() {
-    return OrdinaryOwnPropertyKeys(this);
+    return OrdinaryOwnPropertyKeys(this as unknown as OrdinaryObject);
   }
 
   // NON-SPEC
@@ -758,6 +766,15 @@ export class ObjectValue extends Value {
     });
   }
 }
+export interface WithPrototype extends ObjectValue {
+  Prototype: ObjectValue | NullValue;
+}
+
+export interface WithExtensible extends ObjectValue {
+  Extensible: BooleanValue;
+}
+
+export interface OrdinaryObject extends ObjectValue, WithPrototype, WithExtensible { }
 
 export class ReferenceRecord {
   Base: 'unresolvable' | Value;
@@ -784,18 +801,18 @@ export class ReferenceRecord {
   }
 }
 
+export type DescriptorInit = Pick<Descriptor, 'Configurable' | 'Enumerable' | 'Get' | 'Set' | 'Value' | 'Writable'>;
 // @ts-expect-error
 export function Descriptor(O: Pick<Descriptor, 'Configurable' | 'Enumerable' | 'Get' | 'Set' | 'Value' | 'Writable'>): Descriptor // @ts-expect-error
+
 export @callable() class Descriptor {
-  readonly Value?: Value;
-  // TODO(ts): should be FunctionObjectValue
-  readonly Get?: ObjectValue;
-  // TODO(ts): should be FunctionObjectValue
-  readonly Set?: ObjectValue;
-  readonly Writable?: BooleanValue;
-  readonly Enumerable?: BooleanValue;
-  readonly Configurable?: BooleanValue;
-  constructor(O: Pick<Descriptor, 'Configurable' | 'Enumerable' | 'Get' | 'Set' | 'Value' | 'Writable'>) {
+  Value?: Value;
+  Get?: FunctionObject | UndefinedValue;
+  Set?: FunctionObject | UndefinedValue;
+  Writable?: BooleanValue;
+  Enumerable?: BooleanValue;
+  Configurable?: BooleanValue;
+  constructor(O: DescriptorInit) {
     this.Value = O.Value;
     this.Get = O.Get;
     this.Set = O.Set;
@@ -821,6 +838,18 @@ export @callable() class Descriptor {
   }
 }
 
+export interface DataDescriptor extends Descriptor {
+  Value: Value;
+  Writeable: BooleanValue;
+  Get?: never;
+  Set?: never;
+}
+export interface AccessorDescriptor extends Descriptor {
+  Value?: never;
+  Get: FunctionObject | UndefinedValue;
+  Set: FunctionObject | UndefinedValue;
+}
+
 export class DataBlock extends Uint8Array {
   constructor(sizeOrBuffer: number | ArrayBuffer, byteOffset?: number, length?: number) {
     if (sizeOrBuffer instanceof ArrayBuffer) {
@@ -832,6 +861,7 @@ export class DataBlock extends Uint8Array {
   }
 }
 
+export type LanguageType = "Undefined" | "Null" | "Boolean" | "String" | "Symbol" | "Number" | "BigInt" | "Object";
 export function Type(val: Value) {
   if (val instanceof UndefinedValue) {
     return 'Undefined';

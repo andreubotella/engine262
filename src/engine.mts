@@ -1,10 +1,9 @@
-// @ts-nocheck
-import { Value } from './value.mjs';
+import { BooleanValue, JSStringValue, NullValue, UndefinedValue, Value } from './value.mjs';
 import {
   EnsureCompletion,
   NormalCompletion,
   ThrowCompletion,
-  Q, X,
+  Q, X, unused,
 } from './completion.mjs';
 import {
   IsCallable,
@@ -13,14 +12,22 @@ import {
   CleanupFinalizationRegistry,
   CreateArrayFromList,
   FinishLoadingImportedModule,
+  Realm,
+  type AsyncGeneratorObject,
+  type FunctionObject,
+  type IntrinsicsName,
+  PromiseCapabilityRecord,
+  GraphLoadingState,
 } from './abstract-ops/all.mjs';
 import { GlobalDeclarationInstantiation } from './runtime-semantics/all.mjs';
 import { Evaluate } from './evaluator.mjs';
 import { CallSite, unwind } from './helpers.mjs';
-import { runJobQueue } from './api.mjs';
+import {
+  AbstractModuleRecord, CyclicModuleRecord, EnvironmentRecord, PrivateEnvironmentRecord, runJobQueue, type ScriptRecord,
+} from './api.mjs';
 import * as messages from './messages.mjs';
 
-export const FEATURES = Object.freeze([
+export const FEATURES = [
   {
     name: 'FinalizationRegistry.prototype.cleanupSome',
     flag: 'cleanup-some',
@@ -31,9 +38,12 @@ export const FEATURES = Object.freeze([
     flag: 'is-usv-string',
     url: 'https://github.com/tc39/proposal-is-usv-string',
   },
-].map(Object.freeze));
+] as const
+Object.freeze(FEATURES);
+FEATURES.map(Object.freeze);
+export type ValidFeatures = typeof FEATURES[number]['flag'];
 
-class ExecutionContextStack extends Array {
+class ExecutionContextStack extends Array<ExecutionContext> {
   // This ensures that only the length taking overload is supported.
   // This is necessary to support `ArraySpeciesCreate`, which invokes
   // the constructor with argument `length`:
@@ -41,7 +51,8 @@ class ExecutionContextStack extends Array {
     super(+length);
   }
 
-  pop(ctx) {
+  // @ts-expect-error incompatible override
+  override pop(ctx: ExecutionContext) {
     if (!ctx.poppedForTailCall) {
       const popped = super.pop();
       Assert(popped === ctx);
@@ -50,16 +61,51 @@ class ExecutionContextStack extends Array {
 }
 
 let agentSignifier = 0;
+export interface AgentInit {
+  readonly features?: readonly ValidFeatures[];
+}
+export interface AgentHostDefinedOptions extends Omit<AgentInit, 'features'> {
+  readonly features: Record<ValidFeatures, boolean>
+}
+export interface AgentRecord {
+  readonly LittleEndian: BooleanValue,
+  readonly CanBlock: BooleanValue,
+  readonly Signifier: unknown,
+  readonly IsLockFree1: BooleanValue,
+  readonly IsLockFree2: BooleanValue,
+  readonly IsLockFree8: BooleanValue,
+  readonly CandidateExecution: CandidateExecutionRecord | undefined,
+  readonly KeptAlive: Set<Value>
+}
+/** https://tc39.es/ecma262/#sec-candidate-executions */
+export interface CandidateExecutionRecord {
+  // readonly EventsRecords;
+  // readonly ChosenValues;
+  // readonly AgentOrder;
+  // readonly ReadsBytesFrom;
+  // readonly ReadsFrom;
+  // readonly HostSynchronizesWith;
+  // readonly SynchronizesWith;
+  // readonly HappensBefore;
+}
+export interface JobFunction {}
+/** https://tc39.es/ecma262/#job */
+export interface JobRecord {
+  readonly queueName: string;
+  readonly job: JobFunction;
+  readonly callerRealm: Realm;
+  readonly callerScriptOrModule: ScriptRecord | AbstractModuleRecord | NullValue;
+}
 /** https://tc39.es/ecma262/#sec-agents */
 export class Agent {
-  AgentRecord;
+  readonly AgentRecord: AgentRecord;
   // #execution-context-stack
-  executionContextStack = new ExecutionContextStack();
+  readonly executionContextStack = new ExecutionContextStack();
   // NON-SPEC
-  jobQueue = [];
-  scheduledForCleanup = new Set();
-  hostDefinedOptions;
-  constructor(options = {}) {
+  readonly jobQueue: JobRecord[] = [];
+  readonly scheduledForCleanup = new Set();
+  readonly hostDefinedOptions: AgentHostDefinedOptions;
+  constructor(options: AgentInit = {}) {
     // #table-agent-record
     const Signifier = agentSignifier;
     agentSignifier += 1;
@@ -69,6 +115,7 @@ export class Agent {
       Signifier,
       IsLockFree1: Value.true,
       IsLockFree2: Value.true,
+      IsLockFree8: Value.true,
       CandidateExecution: undefined,
       KeptAlive: new Set(),
     };
@@ -82,7 +129,7 @@ export class Agent {
           acc[flag] = false;
         }
         return acc;
-      }, {}),
+      }, {} as Record<ValidFeatures, boolean>),
     };
   }
 
@@ -102,16 +149,18 @@ export class Agent {
   }
 
   // Get an intrinsic by name for the current realm
-  intrinsic(name) {
+  intrinsic(name: IntrinsicsName) {
     return this.currentRealmRecord.Intrinsics[name];
   }
 
   // Generate a throw completion using message templates
-  Throw(type, template, ...templateArgs) {
+  Throw<T extends keyof typeof messages>(type: Value | string, template: T, ...templateArgs: Parameters<typeof messages[T]>) {
     if (type instanceof Value) {
       return ThrowCompletion(type);
     }
-    const message = messages[template](...templateArgs);
+    const messageF = messages[template];
+    // @ts-expect-error ts cannot understand this
+    const message = messageF(...templateArgs)
     const cons = this.currentRealmRecord.Intrinsics[`%${type}%`];
     let error;
     if (type === 'AggregateError') {
@@ -125,11 +174,11 @@ export class Agent {
     return ThrowCompletion(error);
   }
 
-  queueJob(queueName, job) {
+  queueJob(queueName: string, job: JobFunction) {
     const callerContext = this.runningExecutionContext;
     const callerRealm = callerContext.Realm;
     const callerScriptOrModule = GetActiveScriptOrModule();
-    const pending = {
+    const pending: JobRecord = {
       queueName,
       job,
       callerRealm,
@@ -139,12 +188,12 @@ export class Agent {
   }
 
   // NON-SPEC: Check if a feature is enabled in this agent.
-  feature(name) {
+  feature(name: ValidFeatures) {
     return this.hostDefinedOptions.features[name];
   }
 
   // NON-SPEC
-  mark(m) {
+  mark(m: GCMarker) {
     this.AgentRecord.KeptAlive.forEach((v) => {
       m(v);
     });
@@ -158,24 +207,28 @@ export class Agent {
   }
 }
 
-export let surroundingAgent;
-export function setSurroundingAgent(a) {
+export let surroundingAgent: Agent;
+export function setSurroundingAgent(a: Agent) {
   surroundingAgent = a;
 }
 
+export interface CodeEvaluationState {}
 /** https://tc39.es/ecma262/#sec-execution-contexts */
 export class ExecutionContext {
-  codeEvaluationState;
-  Function;
-  Realm;
-  ScriptOrModule;
-  VariableEnvironment;
-  LexicalEnvironment;
-  PrivateEnvironment;
+  codeEvaluationState: CodeEvaluationState;
+  Function: FunctionObject | NullValue;
+  Realm: Realm;
+  ScriptOrModule: AbstractModuleRecord | ScriptRecord | NullValue;
+  VariableEnvironment: EnvironmentRecord;
+  LexicalEnvironment: EnvironmentRecord;
+  PrivateEnvironment: PrivateEnvironmentRecord | NullValue;
+
+  // Only for generators
+  Generator: AsyncGeneratorObject | UndefinedValue = Value.undefined;
   // NON-SPEC
-  callSite = new CallSite(this);
-  promiseCapability;
-  poppedForTailCall = false;
+  readonly callSite = new CallSite(this);
+  promiseCapability: PromiseCapabilityRecord;
+  readonly poppedForTailCall = false;
 
   copy() {
     const e = new ExecutionContext();
@@ -205,7 +258,7 @@ export class ExecutionContext {
 }
 
 /** https://tc39.es/ecma262/#sec-runtime-semantics-scriptevaluation */
-export function ScriptEvaluation(scriptRecord) {
+export function ScriptEvaluation(scriptRecord: ScriptRecord) {
   if (surroundingAgent.hostDefinedOptions.boost?.evaluateScript) {
     return surroundingAgent.hostDefinedOptions.boost.evaluateScript(scriptRecord);
   }
@@ -240,33 +293,33 @@ export function ScriptEvaluation(scriptRecord) {
 }
 
 /** https://tc39.es/ecma262/#sec-hostenqueuepromisejob */
-export function HostEnqueuePromiseJob(job, _realm) {
+export function HostEnqueuePromiseJob(job: JobFunction, _realm: Realm) {
   surroundingAgent.queueJob('PromiseJobs', job);
 }
 
 /** https://tc39.es/ecma262/#sec-agentsignifier */
-export function AgentSignifier() {
+export function AgentSignifier(): AgentRecord['Signifier'] {
   // 1. Let AR be the Agent Record of the surrounding agent.
   const AR = surroundingAgent.AgentRecord;
   // 2. Return AR.[[Signifier]].
   return AR.Signifier;
 }
 
-export function HostEnsureCanCompileStrings(callerRealm, calleeRealm) {
+export function HostEnsureCanCompileStrings(callerRealm: Realm, calleeRealm: Realm): NormalCompletion<void> | ThrowCompletion {
   if (surroundingAgent.hostDefinedOptions.ensureCanCompileStrings !== undefined) {
     Q(surroundingAgent.hostDefinedOptions.ensureCanCompileStrings(callerRealm, calleeRealm));
   }
   return NormalCompletion(undefined);
 }
 
-export function HostPromiseRejectionTracker(promise, operation) {
+export function HostPromiseRejectionTracker(promise, operation: 'reject' | 'handle'): unused {
   const realm = surroundingAgent.currentRealmRecord;
   if (realm && realm.HostDefined.promiseRejectionTracker) {
     X(realm.HostDefined.promiseRejectionTracker(promise, operation));
   }
 }
 
-export function HostHasSourceTextAvailable(func) {
+export function HostHasSourceTextAvailable(func: FunctionObject): BooleanValue {
   if (surroundingAgent.hostDefinedOptions.hasSourceTextAvailable) {
     return X(surroundingAgent.hostDefinedOptions.hasSourceTextAvailable(func));
   }
@@ -274,7 +327,7 @@ export function HostHasSourceTextAvailable(func) {
 }
 
 // #sec-HostLoadImportedModule
-export function HostLoadImportedModule(referrer, specifier, hostDefined, payload) {
+export function HostLoadImportedModule(referrer: ScriptRecord | CyclicModuleRecord | Realm, specifier: JSStringValue, hostDefined: unknown, payload: GraphLoadingState): unused {
   if (surroundingAgent.hostDefinedOptions.loadImportedModule) {
     const executionContext = surroundingAgent.runningExecutionContext;
     let result;
@@ -301,7 +354,7 @@ export function HostLoadImportedModule(referrer, specifier, hostDefined, payload
 }
 
 /** https://tc39.es/ecma262/#sec-hostgetimportmetaproperties */
-export function HostGetImportMetaProperties(moduleRecord) {
+export function HostGetImportMetaProperties(moduleRecord: AbstractModuleRecord) {
   const realm = surroundingAgent.currentRealmRecord;
   if (realm.HostDefined.getImportMetaProperties) {
     return X(realm.HostDefined.getImportMetaProperties(moduleRecord.HostDefined.public));
@@ -310,12 +363,12 @@ export function HostGetImportMetaProperties(moduleRecord) {
 }
 
 /** https://tc39.es/ecma262/#sec-hostfinalizeimportmeta */
-export function HostFinalizeImportMeta(importMeta, moduleRecord) {
+export function HostFinalizeImportMeta(importMeta: Object, moduleRecord: AbstractModuleRecord): unused {
   const realm = surroundingAgent.currentRealmRecord;
   if (realm.HostDefined.finalizeImportMeta) {
     return X(realm.HostDefined.finalizeImportMeta(importMeta, moduleRecord.HostDefined.public));
   }
-  return Value.undefined;
+  return unused;
 }
 
 /** https://tc39.es/ecma262/#sec-host-cleanup-finalization-registry */
@@ -334,8 +387,14 @@ export function HostEnqueueFinalizationRegistryCleanupJob(fg) {
   return NormalCompletion(undefined);
 }
 
+/** https://tc39.es/ecma262/#sec-jobcallback-records */
+export interface JobCallback {
+  readonly Callback: FunctionObject
+  readonly HostDefined: unknown
+}
+
 /** https://tc39.es/ecma262/#sec-hostmakejobcallback */
-export function HostMakeJobCallback(callback) {
+export function HostMakeJobCallback(callback: FunctionObject): JobCallback {
   // 1. Assert: IsCallable(callback) is true.
   Assert(IsCallable(callback) === Value.true);
   // 2. Return the JobCallback Record { [[Callback]]: callback, [[HostDefined]]: empty }.
@@ -343,7 +402,7 @@ export function HostMakeJobCallback(callback) {
 }
 
 /** https://tc39.es/ecma262/#sec-hostcalljobcallback */
-export function HostCallJobCallback(jobCallback, V, argumentsList) {
+export function HostCallJobCallback(jobCallback: JobCallback, V: Value, argumentsList: readonly Value[]): NormalCompletion | ThrowCompletion {
   // 1. Assert: IsCallable(jobCallback.[[Callback]]) is true.
   Assert(IsCallable(jobCallback.Callback) === Value.true);
   // 1. Return ? Call(jobCallback.[[Callback]], V, argumentsList).

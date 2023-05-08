@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import * as messages from '../messages.mjs';
 import { LanguageParser } from './LanguageParser.mjs';
@@ -6,13 +5,18 @@ import { Token } from './tokens.mjs';
 import { Scope } from './Scope.mjs';
 import { isLineTerminator } from './Lexer.mjs';
 
+export interface Parserinit {
+  source: string;
+  specifier?;
+  json?: boolean;
+}
 export class Parser extends LanguageParser {
   source;
   specifier;
   earlyErrors;
   state;
   scope = new Scope(this);
-  constructor({ source, specifier, json = false }) {
+  constructor({ source, specifier, json = false }: Parserinit) {
     super();
     this.source = source;
     this.specifier = specifier;

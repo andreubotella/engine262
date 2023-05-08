@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Value } from '../value.mjs';
 import { NormalCompletion } from '../completion.mjs';
 import { Evaluate } from '../evaluator.mjs';

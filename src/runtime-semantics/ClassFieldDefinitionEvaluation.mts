@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { X, ReturnIfAbrupt } from '../completion.mjs';
 import { MakeMethod, OrdinaryFunctionCreate } from '../abstract-ops/all.mjs';

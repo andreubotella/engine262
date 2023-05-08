@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { InstantiateAsyncFunctionExpression } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-async-function-definitions-runtime-semantics-evaluation */

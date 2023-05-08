@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   X,
@@ -17,6 +16,7 @@ import {
   AsyncGeneratorResume,
   AsyncGeneratorAwaitReturn,
   CreateIterResultObject,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { bootstrapPrototype } from './bootstrap.mjs';
 
@@ -132,7 +132,7 @@ function AsyncGeneratorPrototype_throw([exception = Value.undefined], { thisValu
   return promiseCapability.Promise;
 }
 
-export function bootstrapAsyncGeneratorFunctionPrototypePrototype(realmRec) {
+export function bootstrapAsyncGeneratorFunctionPrototypePrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['next', AsyncGeneratorPrototype_next, 1],
     ['return', AsyncGeneratorPrototype_return, 1],

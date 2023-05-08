@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { StringValue } from './all.mjs';
 
 export function ModuleRequests(node) {

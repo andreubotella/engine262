@@ -1,8 +1,8 @@
-// @ts-nocheck
+import { isArray } from '../helpers.mjs';
 import { BoundNames } from './all.mjs';
 
 export function TopLevelLexicallyDeclaredNames(node) {
-  if (Array.isArray(node)) {
+  if (isArray(node)) {
     const names = [];
     for (const StatementListItem of node) {
       names.push(...TopLevelLexicallyDeclaredNames(StatementListItem));

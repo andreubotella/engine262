@@ -1,4 +1,3 @@
-// @ts-nocheck
 
 // TODO: this file must not contain TypeScript syntax until we removed valid-throw rule and use TSC to check the error message.
 import { surroundingAgent } from './engine.mjs';

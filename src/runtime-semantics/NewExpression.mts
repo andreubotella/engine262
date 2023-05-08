@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Assert,
@@ -9,13 +8,14 @@ import {
 import { Value } from '../value.mjs';
 import { Evaluate } from '../evaluator.mjs';
 import { Q } from '../completion.mjs';
+import { isArray } from '../helpers.mjs';
 import { ArgumentListEvaluation } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-evaluatenew */
 function* EvaluateNew(constructExpr, args) {
   // 1. Assert: constructExpr is either a NewExpression or a MemberExpression.
   // 2. Assert: arguments is either empty or an Arguments.
-  Assert(args === undefined || Array.isArray(args));
+  Assert(args === undefined || isArray(args));
   // 3. Let ref be the result of evaluating constructExpr.
   const ref = yield* Evaluate(constructExpr);
   // 4. Let constructor be ? GetValue(ref).

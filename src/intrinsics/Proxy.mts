@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   surroundingAgent,
 } from '../engine.mjs';
@@ -8,6 +7,7 @@ import {
   CreateDataProperty,
   OrdinaryObjectCreate,
   ProxyCreate,
+  Realm,
   isProxyExoticObject,
 } from '../abstract-ops/all.mjs';
 import { Value } from '../value.mjs';
@@ -68,7 +68,7 @@ function Proxy_revocable([target = Value.undefined, handler = Value.undefined]) 
   return result;
 }
 
-export function bootstrapProxy(realmRec) {
+export function bootstrapProxy(realmRec: Realm) {
   const proxyConstructor = CreateBuiltinFunction(
     ProxyConstructor,
     2,

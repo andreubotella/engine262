@@ -5,6 +5,7 @@ import {
   PerformPromiseThen,
   PromiseCapabilityRecord,
   PromiseResolve,
+  type NativeFunction,
 } from './abstract-ops/all.mjs';
 import { Value } from './value.mjs';
 import { callable, kAsyncContext, resume } from './helpers.mjs';
@@ -22,6 +23,7 @@ export interface NormalCompletionRecord<T> extends CompletionRecord<T> {
 }
 
 /** https://tc39.es/ecma262/#sec-completion-record-specification-type */ // @ts-expect-error
+export declare function Completion<T extends Completion<Q>, Q>(_init: T): T // @ts-expect-error
 export declare function Completion<T>(_init: NormalCompletion<T>): NormalCompletion<T> // @ts-expect-error
 export declare function Completion<T>(_init: Completion<T>): Completion<T>
 /** https://tc39.es/ecma262/#sec-completion-record-specification-type */
@@ -49,13 +51,14 @@ class Completion<T = unknown> {
 }
 
 /** https://tc39.es/ecma262/#sec-normalcompletion */
-export interface NormalCompletion<T> extends Completion<T> {
+export type NormalCompletion<T = Value> = T extends NormalCompletionObject<infer U> ? NormalCompletionObject<U> : NormalCompletionObject<T> | T
+export interface NormalCompletionObject<T = Value> extends Completion<T> {
   readonly Type: 'normal';
   readonly Target: undefined;
 }
-export function NormalCompletion<T>(argument: T): NormalCompletion<T> {
+export function NormalCompletion<T = Value>(argument: T): NormalCompletionObject<T> {
   // 1. Return Completion { [[Type]]: normal, [[Value]]: argument, [[Target]]: empty }.
-  return new Completion({ Type: 'normal', Value: argument, Target: undefined }) as NormalCompletion<T>;
+  return new Completion({ Type: 'normal', Value: argument, Target: undefined }) as NormalCompletionObject<T>;
 }
 
 Object.defineProperty(NormalCompletion, Symbol.hasInstance, {
@@ -67,7 +70,10 @@ Object.defineProperty(NormalCompletion, Symbol.hasInstance, {
   configurable: true,
 });
 
-export abstract class AbruptCompletion<T> extends Completion<T> {
+export type unused = NormalCompletion<void> | undefined | void;
+export const unused = NormalCompletion<void>(undefined);
+
+export abstract class AbruptCompletion<T = unknown> extends Completion<T> {
   private constructor() {
     Assert(false, 'AbruptCompletion is not a real class.');
     super(null!);
@@ -81,7 +87,7 @@ export abstract class AbruptCompletion<T> extends Completion<T> {
   }
 }
 
-export interface ThrowCompletion<T = unknown> extends Completion<T> {
+export interface ThrowCompletion<T = Value> extends Completion<T> {
   readonly Type: 'throw';
   readonly Target: undefined;
 }
@@ -108,9 +114,8 @@ export function UpdateEmpty<T, Q>(completionRecord: Completion<Q>, value: T): Co
  * https://tc39.es/ecma262/#sec-returnifabrupt
  * https://tc39.es/ecma262/#sec-returnifabrupt-shorthands ? OperationName()
  */
-export function ReturnIfAbrupt<T>(_completion: Completion<T> | T): T
-export function ReturnIfAbrupt<T, Q>(_completion: Completion<T> | Q): T | Q
-export function ReturnIfAbrupt<T>(_completion: Completion<T> | T): never {
+export function ReturnIfAbrupt<T>(_completion: NormalCompletion<T> | ThrowCompletion<unknown>): T
+export function ReturnIfAbrupt(_completion: unknown): never {
   /* c8 skip next */
   throw new TypeError('ReturnIfAbrupt requires build');
 }
@@ -118,9 +123,8 @@ export function ReturnIfAbrupt<T>(_completion: Completion<T> | T): never {
 export { ReturnIfAbrupt as Q };
 
 /** https://tc39.es/ecma262/#sec-returnifabrupt-shorthands ! OperationName() */
-export function X<T>(_completion: NormalCompletion<T> | AbruptCompletion<unknown>): T
-export function X<T>(_completion: T): T
-export function X<T, Q>(_completion: NormalCompletion<T> | AbruptCompletion<unknown> | Q): T | Q
+export function X<T>(_completion: NormalCompletion<T> | ThrowCompletion): T
+export function X<T>(_completion: NormalCompletion<T>): T
 export function X(_completion: unknown): never {
   /* c8 skip next */
   throw new TypeError('X() requires build');
@@ -139,6 +143,9 @@ export function IfAbruptRejectPromise(_value: Completion, _capability: PromiseCa
   throw new TypeError('IfAbruptRejectPromise requires build');
 }
 
+export function EnsureCompletion<T, Q>(val: NormalCompletion<T> | ThrowCompletion<Q>): NormalCompletionObject<T> | ThrowCompletion<Q>
+export function EnsureCompletion<T extends Completion<Q>, Q>(val: T): T
+export function EnsureCompletion<T>(val: T): NormalCompletionObject<T>
 export function EnsureCompletion<T>(val: T | Completion<T>): Completion<T> {
   if (val instanceof Completion) {
     return val;
@@ -152,7 +159,7 @@ export function* Await(value: Value): Generator<Value, Completion, Completion> {
   // 2. Let promise be ? PromiseResolve(%Promise%, value).
   const promise = ReturnIfAbrupt(PromiseResolve(surroundingAgent.intrinsic('%Promise%'), value));
   // 3. Let fulfilledClosure be a new Abstract Closure with parameters (value) that captures asyncContext and performs the following steps when called:
-  const fulfilledClosure = ([valueInner = Value.undefined]) => {
+  const fulfilledClosure: NativeFunction = ([valueInner = Value.undefined]) => {
     // a. Let prevContext be the running execution context.
     const prevContext = surroundingAgent.runningExecutionContext;
     // b. Suspend prevContext.
@@ -170,7 +177,7 @@ export function* Await(value: Value): Generator<Value, Completion, Completion> {
   // @ts-expect-error TODO(ts): CreateBuiltinFunction should return a specalized type FunctionObjectValue that has a kAsyncContext on it.
   onFulfilled[kAsyncContext] = asyncContext;
   // 5. Let rejectedClosure be a new Abstract Closure with parameters (reason) that captures asyncContext and performs the following steps when called:
-  const rejectedClosure = ([reason = Value.undefined]) => {
+  const rejectedClosure: NativeFunction = ([reason = Value.undefined]) => {
     // a. Let prevContext be the running execution context.
     const prevContext = surroundingAgent.runningExecutionContext;
     // b. Suspend prevContext.

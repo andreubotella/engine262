@@ -1,14 +1,14 @@
-// @ts-nocheck
-import { Parser } from './parser/Parser.mjs';
+import { Parser, type Parserinit } from './parser/Parser.mjs';
 import { RegExpParser } from './parser/RegExpParser.mjs';
 import { surroundingAgent } from './engine.mjs';
-import { SourceTextModuleRecord } from './modules.mjs';
-import { Value } from './value.mjs';
+import { AbstractModuleRecord, SourceTextModuleRecord, type CyclicModuleRecordRequestedModule } from './modules.mjs';
+import { JSStringValue, UndefinedValue, Value } from './value.mjs';
 import {
   Get,
   Set,
   Call,
   CreateDefaultExportSyntheticModule,
+  Realm,
 } from './abstract-ops/all.mjs';
 import { Q, X } from './completion.mjs';
 import {
@@ -17,7 +17,7 @@ import {
   ExportEntries,
   ImportedLocalNames,
 } from './static-semantics/all.mjs';
-import { ValueSet, kInternal } from './helpers.mjs';
+import { ValueSet, isArray, kInternal } from './helpers.mjs';
 
 export { Parser, RegExpParser };
 
@@ -36,7 +36,7 @@ function handleError(e) {
   }
 }
 
-export function wrappedParse(init, f) {
+export function wrappedParse<T>(init: Parserinit, f: (parser: Parser) => T): T {
   const p = new Parser(init);
 
   try {
@@ -50,6 +50,16 @@ export function wrappedParse(init, f) {
   }
 }
 
+export interface LoadedModule {
+  readonly Specifier: JSStringValue;
+  readonly Module: AbstractModuleRecord;
+}
+export interface ScriptRecord {
+  Realm: Realm | UndefinedValue;
+  ECMAScriptCode;
+  LoadedModules: LoadedModule[];
+  HostDefined: unknown;
+}
 export function ParseScript(sourceText, realm, hostDefined = {}) {
   // 1. Assert: sourceText is an ECMAScript source text (see clause 10).
   // 2. Parse sourceText using Script as the goal symbol and analyse the parse result for
@@ -65,7 +75,7 @@ export function ParseScript(sourceText, realm, hostDefined = {}) {
     json: hostDefined[kInternal]?.json,
   }, (p) => p.parseScript());
   // 3. If body is a List of errors, return body.
-  if (Array.isArray(body)) {
+  if (isArray(body)) {
     return body;
   }
   // 4. Return Script Record { [[Realm]]: realm, [[ECMAScriptCode]]: body, [[HostDefined]]: hostDefined }.
@@ -95,7 +105,7 @@ export function ParseModule(sourceText, realm, hostDefined = {}) {
   //    objects in the list is implementation-dependent, but at least one must be present.
   const body = wrappedParse({ source: sourceText, specifier: hostDefined.specifier }, (p) => p.parseModule());
   // 3. If body is a List of errors, return body.
-  if (Array.isArray(body)) {
+  if (isArray(body)) {
     return body;
   }
   // 4. Let requestedModules be the ModuleRequests of body.

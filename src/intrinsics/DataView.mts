@@ -1,10 +1,10 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   IsDetachedBuffer,
   OrdinaryCreateFromConstructor,
   ToIndex,
   RequireInternalSlot,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Value } from '../value.mjs';
 import { Q } from '../completion.mjs';
@@ -59,7 +59,7 @@ function DataViewConstructor([buffer = Value.undefined, byteOffset = Value.undef
   return O;
 }
 
-export function bootstrapDataView(realmRec) {
+export function bootstrapDataView(realmRec: Realm) {
   const dvConstructor = bootstrapConstructor(realmRec, DataViewConstructor, 'DataView', 1, realmRec.Intrinsics['%DataView.prototype%'], []);
 
   realmRec.Intrinsics['%DataView%'] = dvConstructor;

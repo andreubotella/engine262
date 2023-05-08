@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Value } from '../value.mjs';
 import { Q, X, ReturnIfAbrupt } from '../completion.mjs';
 import {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { InstantiateArrowFunctionExpression } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-arrow-function-definitions-runtime-semantics-evaluation */

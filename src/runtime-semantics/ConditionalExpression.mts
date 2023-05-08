@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Value } from '../value.mjs';
 import { Evaluate } from '../evaluator.mjs';
 import { ToBoolean, GetValue } from '../abstract-ops/all.mjs';

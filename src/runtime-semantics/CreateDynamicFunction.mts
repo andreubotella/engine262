@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Assert,
   DefinePropertyOrThrow,
@@ -19,7 +18,7 @@ import { Token } from '../parser/tokens.mjs';
 import {
   Descriptor, UndefinedValue, Value,
 } from '../value.mjs';
-import { OutOfRange } from '../helpers.mjs';
+import { OutOfRange, isArray } from '../helpers.mjs';
 
 // #table-dynamic-function-sourcetext-prefixes
 const DynamicFunctionSourceTextPrefixes = {
@@ -135,7 +134,7 @@ export function CreateDynamicFunction(constructor, newTarget, kind, args) {
       p.expect(Token.EOS);
       return r;
     });
-    if (Array.isArray(f)) {
+    if (isArray(f)) {
       return surroundingAgent.Throw(f[0]);
     }
     parameters = f.FormalParameters;

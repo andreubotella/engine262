@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NormalCompletion } from '../completion.mjs';
 
 /** https://tc39.es/ecma262/#sec-statement-semantics-runtime-semantics-evaluation */

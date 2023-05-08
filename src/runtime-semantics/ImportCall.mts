@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent, HostLoadImportedModule } from '../engine.mjs';
 import { Evaluate } from '../evaluator.mjs';
 import {

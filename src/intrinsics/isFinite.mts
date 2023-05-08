@@ -1,7 +1,7 @@
-// @ts-nocheck
 import {
   ToNumber,
   CreateBuiltinFunction,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Value } from '../value.mjs';
 import { Q } from '../completion.mjs';
@@ -18,6 +18,6 @@ function IsFinite([number = Value.undefined]) {
   return Value.true;
 }
 
-export function bootstrapIsFinite(realmRec) {
+export function bootstrapIsFinite(realmRec: Realm) {
   realmRec.Intrinsics['%isFinite%'] = CreateBuiltinFunction(IsFinite, 1, Value('isFinite'), [], realmRec);
 }

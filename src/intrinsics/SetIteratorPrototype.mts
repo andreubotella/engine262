@@ -1,10 +1,10 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Assert,
   CreateArrayFromList,
   CreateIteratorFromClosure,
   GeneratorResume,
+  Realm,
   RequireInternalSlot,
   Yield,
 } from '../abstract-ops/all.mjs';
@@ -63,7 +63,7 @@ function SetIteratorPrototype_next(args, { thisValue }) {
   return Q(GeneratorResume(thisValue, undefined, kSetIteratorPrototype));
 }
 
-export function bootstrapSetIteratorPrototype(realmRec) {
+export function bootstrapSetIteratorPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['next', SetIteratorPrototype_next, 0],
   ], realmRec.Intrinsics['%IteratorPrototype%'], 'Set Iterator');

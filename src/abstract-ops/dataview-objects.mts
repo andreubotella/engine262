@@ -1,7 +1,11 @@
-// @ts-nocheck
-import { Q, X } from '../completion.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X,
+} from '../completion.mjs';
 import { surroundingAgent } from '../engine.mjs';
-import { Value } from '../value.mjs';
+import { CastType } from '../helpers.mjs';
+import {
+  BigIntValue, NumberValue, Value, type WithPrototype, BooleanValue,
+} from '../value.mjs';
 import {
   Assert,
   GetValueFromBuffer,
@@ -14,21 +18,31 @@ import {
   ToBigInt,
   RequireInternalSlot,
   typedArrayInfoByType,
+  type TypedArrayElementType,
+  type ArrayBufferObject,
 } from './all.mjs';
 
 // This file covers abstract operations defined in
 /** https://tc39.es/ecma262/#sec-dataview-objects */
+export interface DataViewObject extends WithPrototype {
+  readonly DataView: never; // brand
+  readonly ViewedArrayBuffer: ArrayBufferObject;
+  readonly ByteLength: number;
+  readonly ByteOffset: number;
+}
 
 /** https://tc39.es/ecma262/#sec-getviewvalue */
-export function GetViewValue(view, requestIndex, isLittleEndian, type) {
+export function GetViewValue(view: Value, requestIndex: Value, isLittleEndian: Value, type: TypedArrayElementType): NormalCompletion<NumberValue | BigIntValue> | ThrowCompletion {
   // 1. Perform ? RequireInternalSlot(view, [[DataView]]).
   Q(RequireInternalSlot(view, 'DataView'));
   // 2. Assert: view has a [[ViewedArrayBuffer]] internal slot.
   Assert('ViewedArrayBuffer' in view);
+  CastType<DataViewObject>(view);
   // 3. Let getIndex be ? ToIndex(requestIndex).
   const getIndex = Q(ToIndex(requestIndex));
   // 4. Set isLittleEndian to ! ToBoolean(isLittleEndian).
   isLittleEndian = X(ToBoolean(isLittleEndian));
+  CastType<BooleanValue>(isLittleEndian);
   // 5. Let buffer be view.[[ViewedArrayBuffer]].
   const buffer = view.ViewedArrayBuffer;
   // 6. If IsDetachedBuffer(buffer) is true, throw a TypeError exception.
@@ -52,11 +66,12 @@ export function GetViewValue(view, requestIndex, isLittleEndian, type) {
 }
 
 /** https://tc39.es/ecma262/#sec-setviewvalue */
-export function SetViewValue(view, requestIndex, isLittleEndian, type, value) {
+export function SetViewValue(view: Value, requestIndex: Value, isLittleEndian: Value, type: TypedArrayElementType, value: Value): NormalCompletion<undefined> | ThrowCompletion {
   // 1. Perform ? RequireInternalSlot(view, [[DataView]]).
   Q(RequireInternalSlot(view, 'DataView'));
   // 2. Assert: view has a [[ViewedArrayBuffer]] internal slot.
   Assert('ViewedArrayBuffer' in view);
+  CastType<DataViewObject>(view);
   // 3. Let getIndex be ? ToIndex(requestIndex).
   const getIndex = Q(ToIndex(requestIndex));
   // 4. If ! IsBigIntElementType(type) is true, let numberValue be ? ToBigInt(value).

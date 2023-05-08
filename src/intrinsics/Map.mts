@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Assert,
@@ -10,6 +9,7 @@ import {
   IteratorStep,
   IteratorValue,
   OrdinaryCreateFromConstructor,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   ObjectValue,
@@ -79,7 +79,7 @@ function Map_speciesGetter(args, { thisValue }) {
   return thisValue;
 }
 
-export function bootstrapMap(realmRec) {
+export function bootstrapMap(realmRec: Realm) {
   const mapConstructor = bootstrapConstructor(realmRec, MapConstructor, 'Map', 0, realmRec.Intrinsics['%Map.prototype%'], [
     [wellKnownSymbols.species, [Map_speciesGetter]],
   ]);

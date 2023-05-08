@@ -1,11 +1,12 @@
-// @ts-nocheck
-import type { ThrowCompletion, Value } from '../api.mjs';
+import type { ThrowCompletion, Value, unused } from '../api.mjs';
 import { surroundingAgent } from '../engine.mjs';
 import { ObjectValue } from '../value.mjs';
 
 class AssertError extends Error {}
 
-export function Assert(invariant: boolean, source?: string): asserts invariant {
+export function Assert(invariant: boolean, source?: string): asserts invariant
+export function Assert<T>(invariant: T, source?: string): asserts invariant is NonNullable<T>
+export function Assert(invariant: unknown, source?: string): void {
   /* c8 ignore next */
   if (!invariant) {
     throw new AssertError(source);
@@ -13,7 +14,7 @@ export function Assert(invariant: boolean, source?: string): asserts invariant {
 }
 
 /** https://tc39.es/ecma262/#sec-requireinternalslot */
-export function RequireInternalSlot(O: Value, internalSlot: string): ThrowCompletion<ObjectValue> | undefined {
+export function RequireInternalSlot(O: Value, internalSlot: string): ThrowCompletion | unused {
   if (!(O instanceof ObjectValue)) {
     return surroundingAgent.Throw('TypeError', 'NotAnObject', O);
   }
@@ -22,7 +23,7 @@ export function RequireInternalSlot(O: Value, internalSlot: string): ThrowComple
   }
 }
 
-export function sourceTextMatchedBy(node) {
+export function sourceTextMatchedBy(node): string {
   return node.sourceText();
 }
 
@@ -47,6 +48,6 @@ export function sourceTextMatchedBy(node) {
 //  - Function code that is supplied as the arguments to the built-in Function, Generator, AsyncFunction, and
 //    AsyncGenerator constructors is strict mode code if the last argument is a String that when processed is a
 //    FunctionBody that begins with a Directive Prologue that contains a Use Strict Directive.
-export function isStrictModeCode(node) {
+export function isStrictModeCode(node): boolean {
   return node.strict;
 }

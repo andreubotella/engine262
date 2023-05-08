@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Call,
@@ -8,6 +7,7 @@ import {
   IteratorStep,
   IteratorValue,
   OrdinaryCreateFromConstructor,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Value, wellKnownSymbols } from '../value.mjs';
 import { IfAbruptCloseIterator, Q } from '../completion.mjs';
@@ -58,7 +58,7 @@ function Set_speciesGetter(args, { thisValue }) {
   return thisValue;
 }
 
-export function bootstrapSet(realmRec) {
+export function bootstrapSet(realmRec: Realm) {
   const setConstructor = bootstrapConstructor(realmRec, SetConstructor, 'Set', 0, realmRec.Intrinsics['%Set.prototype%'], [
     [wellKnownSymbols.species, [Set_speciesGetter]],
   ]);

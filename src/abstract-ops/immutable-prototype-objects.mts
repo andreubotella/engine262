@@ -1,10 +1,11 @@
-// @ts-nocheck
-import { NullValue, ObjectValue, Value } from '../value.mjs';
-import { Q } from '../completion.mjs';
+import {
+  BooleanValue, NullValue, ObjectValue, Value,
+} from '../value.mjs';
+import { NormalCompletion, Q, ThrowCompletion } from '../completion.mjs';
 import { Assert, SameValue } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-set-immutable-prototype */
-export function SetImmutablePrototype(O, V) {
+export function SetImmutablePrototype(O: ObjectValue, V: ObjectValue | NullValue): NormalCompletion<BooleanValue> | ThrowCompletion {
   // 1. Assert: Either Type(V) is Object or Type(V) is Null.
   Assert(V instanceof ObjectValue || V instanceof NullValue);
   // 2. Let current be ? O.[[GetPrototypeOf]]().

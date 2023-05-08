@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   NullValue,
@@ -17,6 +16,7 @@ import {
   IsAccessorDescriptor,
   IsArray,
   IsCallable,
+  Realm,
   RequireObjectCoercible,
   SameValue,
   ToObject,
@@ -265,7 +265,7 @@ function ObjectProto__proto__Set([proto = Value.undefined], { thisValue }) {
   return Value.undefined;
 }
 
-export function bootstrapObjectPrototype(realmRec) {
+export function bootstrapObjectPrototype(realmRec: Realm) {
   const proto = realmRec.Intrinsics['%Object.prototype%'];
 
   assignProps(realmRec, proto, [

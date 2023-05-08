@@ -1,10 +1,10 @@
-// @ts-nocheck
 import {
   Assert,
   CreateBuiltinFunction,
   ToInt32,
   ToString,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { TrimString } from '../runtime-semantics/all.mjs';
 import { Q, X } from '../completion.mjs';
@@ -96,6 +96,6 @@ function ParseInt([string = Value.undefined, radix = Value.undefined]) {
   return F(sign * number);
 }
 
-export function bootstrapParseInt(realmRec) {
+export function bootstrapParseInt(realmRec: Realm) {
   realmRec.Intrinsics['%parseInt%'] = CreateBuiltinFunction(ParseInt, 2, Value('parseInt'), [], realmRec);
 }

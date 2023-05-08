@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   surroundingAgent,
 } from '../engine.mjs';
@@ -7,6 +6,7 @@ import {
   OrdinaryCreateFromConstructor,
   InstallErrorCause,
   ToString,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   Descriptor,
@@ -17,7 +17,7 @@ import { Q, X } from '../completion.mjs';
 import { captureStack } from '../helpers.mjs';
 import { bootstrapConstructor, bootstrapPrototype } from './bootstrap.mjs';
 
-export function bootstrapNativeError(realmRec) {
+export function bootstrapNativeError(realmRec: Realm) {
   for (const name of [
     'EvalError',
     'RangeError',

@@ -1,6 +1,7 @@
-// @ts-nocheck
 import { ExecutionContext, HostEnsureCanCompileStrings, surroundingAgent } from '../engine.mjs';
-import { JSStringValue, Value } from '../value.mjs';
+import {
+  JSStringValue, NullValue, UndefinedValue, Value,
+} from '../value.mjs';
 import { InstantiateFunctionObject } from '../runtime-semantics/all.mjs';
 import {
   IsStrict,
@@ -16,7 +17,7 @@ import {
   AbruptCompletion,
   NormalCompletion,
   EnsureCompletion,
-  Q, X,
+  Q, X, ThrowCompletion, type NormalCompletionObject,
 } from '../completion.mjs';
 import { wrappedParse } from '../parse.mjs';
 import {
@@ -24,16 +25,21 @@ import {
   FunctionEnvironmentRecord,
   GlobalEnvironmentRecord,
   ObjectEnvironmentRecord,
+  PrivateEnvironmentRecord,
+  EnvironmentRecord,
+  DeclarativeEnvironmentRecord,
 } from '../environment.mjs';
 import { Evaluate } from '../evaluator.mjs';
-import { unwind, ValueSet } from '../helpers.mjs';
-import { Assert, GetThisEnvironment } from './all.mjs';
+import {
+  CastType, isArray, unwind, ValueSet,
+} from '../helpers.mjs';
+import { Assert, GetThisEnvironment, Realm } from './all.mjs';
 
 // This file covers abstract operations defined in
 /** https://tc39.es/ecma262/#sec-global-object */
 
 /** https://tc39.es/ecma262/#sec-performeval */
-export function PerformEval(x, callerRealm, strictCaller, direct) {
+export function PerformEval(x: Value, callerRealm: Realm, strictCaller: boolean, direct: boolean): NormalCompletion | ThrowCompletion {
   // 1. Assert: If direct is false, then strictCaller is also false.
   if (direct === false) {
     Assert(strictCaller === false);
@@ -70,10 +76,10 @@ export function PerformEval(x, callerRealm, strictCaller, direct) {
       if (F.ConstructorKind === 'derived') {
         inDerivedConstructor = true;
       }
-      // v. Let classFieldIntializerName be F.[[ClassFieldInitializerName]].
-      const classFieldIntializerName = F.ClassFieldInitializerName;
-      // vi. If classFieldIntializerName is not empty, set inClassFieldInitializer to true.
-      if (classFieldIntializerName !== undefined) {
+      // v. Let classFieldInitializerName be F.[[ClassFieldInitializerName]].
+      const classFieldInitializerName = F.ClassFieldInitializerName;
+      // vi. If classFieldInitializerName is not empty, set inClassFieldInitializer to true.
+      if (classFieldInitializerName !== undefined) {
         inClassFieldInitializer = true;
       }
     }
@@ -87,9 +93,9 @@ export function PerformEval(x, callerRealm, strictCaller, direct) {
   //   f. If inMethod is false, and body Contains SuperProperty, throw a SyntaxError exception.
   //   g. If inDerivedConstructor is false, and body Contains SuperCall, throw a SyntaxError exception.
   //   h. If inClassFieldInitializer is true, and ContainsArguments of body is true, throw a SyntaxError exception.
-  const privateIdentifiers = [];
+  const privateIdentifiers: string[] = [];
   let pointer = direct ? surroundingAgent.runningExecutionContext.PrivateEnvironment : Value.null;
-  while (pointer !== Value.null) {
+  while (!(pointer instanceof NullValue)) {
     for (const binding of pointer.Names) {
       privateIdentifiers.push(binding.Description.stringValue());
     }
@@ -107,7 +113,7 @@ export function PerformEval(x, callerRealm, strictCaller, direct) {
     });
     return parser.parseScript();
   }));
-  if (Array.isArray(script)) {
+  if (isArray(script)) {
     return surroundingAgent.Throw(script[0]);
   }
   if (!script.ScriptBody) {
@@ -127,9 +133,9 @@ export function PerformEval(x, callerRealm, strictCaller, direct) {
   }
   // 13. Let runningContext be the running execution context.
   const runningContext = surroundingAgent.runningExecutionContext;
-  let lexEnv;
-  let varEnv;
-  let privateEnv;
+  let lexEnv: DeclarativeEnvironmentRecord;
+  let varEnv: EnvironmentRecord;
+  let privateEnv: PrivateEnvironmentRecord | NullValue;
   // 14. NOTE: If direct is true, runningContext will be the execution context that performed the direct eval.
   //     If direct is false, runningContext will be the execution context for the invocation of the eval function.
   // 15. If direct is true, then
@@ -170,7 +176,7 @@ export function PerformEval(x, callerRealm, strictCaller, direct) {
   // 26. Push evalContext onto the execution context stack.
   surroundingAgent.executionContextStack.push(evalContext);
   // 27. Let result be EvalDeclarationInstantiation(body, varEnv, lexEnv, privateEnv, strictEval).
-  let result = EnsureCompletion(EvalDeclarationInstantiation(body, varEnv, lexEnv, privateEnv, strictEval));
+  let result: NormalCompletionObject<undefined | UndefinedValue> | ThrowCompletion = EnsureCompletion(EvalDeclarationInstantiation(body, varEnv, lexEnv, privateEnv, strictEval));
   // 28. If result.[[Type]] is normal, then
   if (result.Type === 'normal') {
     // a. Set result to the result of evaluating body.
@@ -181,6 +187,7 @@ export function PerformEval(x, callerRealm, strictCaller, direct) {
     // a. Set result to NormalCompletion(undefined).
     result = NormalCompletion(Value.undefined);
   }
+  CastType<NormalCompletionObject<UndefinedValue> | ThrowCompletion>(result);
   // 30. Suspend evalContext and remove it from the execution context stack.
   // 31. Resume the context that is now on the top of the execution context stack as the running execution context.
   surroundingAgent.executionContextStack.pop(evalContext);
@@ -189,7 +196,7 @@ export function PerformEval(x, callerRealm, strictCaller, direct) {
 }
 
 /** https://tc39.es/ecma262/#sec-evaldeclarationinstantiation */
-function EvalDeclarationInstantiation(body, varEnv, lexEnv, privateEnv, strict) {
+function EvalDeclarationInstantiation(body, varEnv: EnvironmentRecord, lexEnv: DeclarativeEnvironmentRecord, privateEnv: PrivateEnvironmentRecord | NullValue, strict: boolean): NormalCompletionObject<undefined> | ThrowCompletion {
   // 1. Let varNames be the VarDeclaredNames of body.
   const varNames = VarDeclaredNames(body);
   // 2. Let varDeclarations be the VarScopedDeclarations of body.
@@ -208,7 +215,7 @@ function EvalDeclarationInstantiation(body, varEnv, lexEnv, privateEnv, strict) 
       }
     }
     // b. Let thisLex be lexEnv.
-    let thisEnv = lexEnv;
+    let thisEnv: EnvironmentRecord = lexEnv;
     // c. Assert: The following loop will terminate.
     // d. Repeat, while thisEnv is not the same as varEnv,
     while (thisEnv !== varEnv) {
@@ -235,7 +242,7 @@ function EvalDeclarationInstantiation(body, varEnv, lexEnv, privateEnv, strict) 
   // 5. Let pointer be privateEnv.
   let pointer = privateEnv;
   // 6. Repeat, while pointer is not null,
-  while (pointer !== Value.null) {
+  while (!(pointer instanceof NullValue)) {
     // a. For each Private Name binding of pointer.[[Names]], do
     for (const binding of pointer.Names) {
       // i. If privateIdentifiers does not contain binding.[[Description]], append binding.[[Description]] to privateIdentifiers.
@@ -284,7 +291,7 @@ function EvalDeclarationInstantiation(body, varEnv, lexEnv, privateEnv, strict) 
   }
   // 11. NOTE: Annex B.3.3.3 adds additional steps at this point.
   // 12. Let declaredVarNames be a new empty List.
-  const declaredVarNames = new ValueSet();
+  const declaredVarNames = new ValueSet<JSStringValue>();
   // 13. For each d in varDeclarations, do
   for (const d of varDeclarations) {
     // a. If d is a VariableDeclaration, a ForBinding, or a BindingIdentifier, then

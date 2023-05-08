@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Descriptor,
   SymbolValue,
@@ -9,6 +8,7 @@ import {
   surroundingAgent,
 } from '../engine.mjs';
 import {
+  Realm,
   SameValue,
   ToString,
 } from '../abstract-ops/all.mjs';
@@ -72,7 +72,7 @@ function Symbol_keyFor([sym = Value.undefined]) {
   return Value.undefined;
 }
 
-export function bootstrapSymbol(realmRec) {
+export function bootstrapSymbol(realmRec: Realm) {
   const symbolConstructor = bootstrapConstructor(realmRec, SymbolConstructor, 'Symbol', 0, realmRec.Intrinsics['%Symbol.prototype%'], [
     ['for', Symbol_for, 1],
     ['keyFor', Symbol_keyFor, 1],

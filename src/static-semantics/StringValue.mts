@@ -1,8 +1,7 @@
-// @ts-nocheck
-import { Value } from '../value.mjs';
+import { JSStringValue, Value } from '../value.mjs';
 import { OutOfRange } from '../helpers.mjs';
 
-export function StringValue(node) {
+export function StringValue(node): JSStringValue {
   switch (node.type) {
     case 'Identifier':
     case 'IdentifierName':

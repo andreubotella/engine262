@@ -1,9 +1,8 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Value, Descriptor } from '../value.mjs';
 import { Evaluate } from '../evaluator.mjs';
 import { Q, X } from '../completion.mjs';
-import { OutOfRange } from '../helpers.mjs';
+import { OutOfRange, isArray } from '../helpers.mjs';
 import {
   Assert,
   ArrayCreate,
@@ -169,7 +168,7 @@ function* ArgumentListEvaluation_Arguments(Arguments) {
 
 export function ArgumentListEvaluation(ArgumentsOrTemplateLiteral) {
   switch (true) {
-    case Array.isArray(ArgumentsOrTemplateLiteral):
+    case isArray(ArgumentsOrTemplateLiteral):
       return ArgumentListEvaluation_Arguments(ArgumentsOrTemplateLiteral);
     case ArgumentsOrTemplateLiteral.type === 'TemplateLiteral':
       return ArgumentListEvaluation_TemplateLiteral(ArgumentsOrTemplateLiteral);

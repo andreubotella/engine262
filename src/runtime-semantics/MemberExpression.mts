@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { GetValue, MakePrivateReference, RequireObjectCoercible } from '../abstract-ops/all.mjs';
 import { Evaluate } from '../evaluator.mjs';
 import { Q, X } from '../completion.mjs';

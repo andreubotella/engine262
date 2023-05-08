@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { NumberValue, Value } from '../value.mjs';
 import {
+  Realm,
   ToBigInt,
   ToIndex,
   ToPrimitive,
@@ -50,7 +50,7 @@ function BigInt_asUintN([bits = Value.undefined, bigint = Value.undefined]) {
   return Z(BigInt.asUintN(bits, bigint.bigintValue()));
 }
 
-export function bootstrapBigInt(realmRec) {
+export function bootstrapBigInt(realmRec: Realm) {
   const bigintConstructor = bootstrapConstructor(realmRec, BigIntConstructor, 'BigInt', 1, realmRec.Intrinsics['%BigInt.prototype%'], [
     ['asIntN', BigInt_asIntN, 2],
     ['asUintN', BigInt_asUintN, 2],

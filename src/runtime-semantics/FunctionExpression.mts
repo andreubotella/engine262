@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { InstantiateOrdinaryFunctionExpression } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-function-definitions-runtime-semantics-evaluation */

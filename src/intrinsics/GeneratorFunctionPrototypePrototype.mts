@@ -1,7 +1,7 @@
-// @ts-nocheck
 import {
   GeneratorResume,
   GeneratorResumeAbrupt,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   Completion,
@@ -39,7 +39,7 @@ function GeneratorProto_throw([exception = Value.undefined], { thisValue }) {
   return Q(GeneratorResumeAbrupt(g, C, undefined));
 }
 
-export function bootstrapGeneratorFunctionPrototypePrototype(realmRec) {
+export function bootstrapGeneratorFunctionPrototypePrototype(realmRec: Realm) {
   const generatorPrototype = bootstrapPrototype(realmRec, [
     ['next', GeneratorProto_next, 1],
     ['return', GeneratorProto_return, 1],

@@ -1,10 +1,13 @@
-// @ts-nocheck
 import {
   Descriptor,
+  ObjectValue,
+  UndefinedValue,
   Value,
 } from '../value.mjs';
-import { NewGlobalEnvironment } from '../environment.mjs';
-import { Q, X } from '../completion.mjs';
+import { GlobalEnvironmentRecord, NewGlobalEnvironment } from '../environment.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X, unused,
+} from '../completion.mjs';
 import { bootstrapObjectPrototype } from '../intrinsics/ObjectPrototype.mjs';
 import { bootstrapObject } from '../intrinsics/Object.mjs';
 import { bootstrapArrayPrototype } from '../intrinsics/ArrayPrototype.mjs';
@@ -80,24 +83,39 @@ import { bootstrapWeakRefPrototype } from '../intrinsics/WeakRefPrototype.mjs';
 import { bootstrapWeakRef } from '../intrinsics/WeakRef.mjs';
 import { bootstrapFinalizationRegistryPrototype } from '../intrinsics/FinalizationRegistryPrototype.mjs';
 import { bootstrapFinalizationRegistry } from '../intrinsics/FinalizationRegistry.mjs';
+import type { LoadedModule } from '../parse.mjs';
+import type { GCMarker } from '../engine.mjs';
+import { CastType } from '../helpers.mjs';
 import {
   Assert,
   DefinePropertyOrThrow,
   F as toNumberValue,
   OrdinaryObjectCreate,
+  type ArrayExoticObject,
+  type FunctionObject,
 } from './all.mjs';
 
+export type IntrinsicsName = string;
 /** https://tc39.es/ecma262/#sec-code-realms */
 export class Realm {
-  Intrinsics;
-  GlobalObject;
-  GlobalEnv;
-  TemplateMap;
-  LoadedModules;
-  HostDefined;
-  randomState;
+  Intrinsics!: Record<IntrinsicsName, Value>;
+  GlobalObject: ObjectValue | UndefinedValue;
+  GlobalEnv: GlobalEnvironmentRecord;
+  TemplateMap: Array<{ Site, Array: ArrayExoticObject }>;
+  LoadedModules: LoadedModule[];
+  HostDefined: unknown;
+  // NON-SPEC
+  randomState: undefined | BigUint64Array;
 
-  mark(m) {
+  constructor() {
+    CreateIntrinsics(this);
+    this.GlobalObject = Value.undefined;
+    this.GlobalEnv = Value.undefined;
+    this.TemplateMap = [];
+    this.LoadedModules = [];
+  }
+
+  mark(m: GCMarker) {
     m(this.GlobalObject);
     m(this.GlobalEnv);
     for (const v of Object.values(this.Intrinsics)) {
@@ -113,17 +131,13 @@ export class Realm {
 }
 
 /** https://tc39.es/ecma262/#sec-createrealm */
-export function CreateRealm() {
-  const realmRec = new Realm();
-  CreateIntrinsics(realmRec);
-  realmRec.GlobalObject = Value.undefined;
-  realmRec.GlobalEnv = Value.undefined;
-  realmRec.TemplateMap = [];
-  realmRec.LoadedModules = [];
-  return realmRec;
+export function CreateRealm(): Realm {
+  // steps delegated to the constructor
+  return new Realm();
 }
 
-function AddRestrictedFunctionProperties(F, realm) {
+/** https://tc39.es/ecma262/#sec-addrestrictedfunctionproperties */
+function AddRestrictedFunctionProperties(F: FunctionObject, realm: Realm): unused {
   Assert(realm.Intrinsics['%ThrowTypeError%']);
   const thrower = realm.Intrinsics['%ThrowTypeError%'];
   X(DefinePropertyOrThrow(F, Value('caller'), Descriptor({
@@ -141,8 +155,8 @@ function AddRestrictedFunctionProperties(F, realm) {
 }
 
 /** https://tc39.es/ecma262/#sec-createintrinsics */
-export function CreateIntrinsics(realmRec) {
-  const intrinsics = Object.create(null);
+export function CreateIntrinsics(realmRec: Realm): unused {
+  const intrinsics: Realm['Intrinsics'] = Object.create(null);
   realmRec.Intrinsics = intrinsics;
 
   intrinsics['%Object.prototype%'] = OrdinaryObjectCreate(Value.null);
@@ -253,20 +267,22 @@ export function CreateIntrinsics(realmRec) {
   bootstrapFinalizationRegistryPrototype(realmRec);
   bootstrapFinalizationRegistry(realmRec);
 
-  AddRestrictedFunctionProperties(intrinsics['%Function.prototype%'], realmRec);
+  AddRestrictedFunctionProperties(intrinsics['%Function.prototype%'] as FunctionObject, realmRec);
 
   return intrinsics;
 }
 
 /** https://tc39.es/ecma262/#sec-setrealmglobalobject */
-export function SetRealmGlobalObject(realmRec, globalObj, thisValue) {
+export function SetRealmGlobalObject(realmRec: Realm, globalObj: ObjectValue | UndefinedValue, thisValue: ObjectValue | UndefinedValue): unused {
   const intrinsics = realmRec.Intrinsics;
-  if (globalObj === Value.undefined) {
+  if (globalObj instanceof UndefinedValue) {
     globalObj = OrdinaryObjectCreate(intrinsics['%Object.prototype%']);
   }
-  if (thisValue === Value.undefined) {
+  CastType<ObjectValue>(globalObj);
+  if (thisValue instanceof UndefinedValue) {
     thisValue = globalObj;
   }
+  CastType<ObjectValue>(thisValue);
   realmRec.GlobalObject = globalObj;
   const newGlobalEnv = NewGlobalEnvironment(globalObj, thisValue);
   realmRec.GlobalEnv = newGlobalEnv;
@@ -274,7 +290,7 @@ export function SetRealmGlobalObject(realmRec, globalObj, thisValue) {
 }
 
 /** https://tc39.es/ecma262/#sec-setdefaultglobalbindings */
-export function SetDefaultGlobalBindings(realmRec) {
+export function SetDefaultGlobalBindings(realmRec: Realm): NormalCompletion<ObjectValue> | ThrowCompletion {
   const global = realmRec.GlobalObject;
 
   // Value Properties of the Global Object

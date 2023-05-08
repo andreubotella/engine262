@@ -1,8 +1,8 @@
-// @ts-nocheck
+import { isArray } from '../helpers.mjs';
 import { TopLevelLexicallyScopedDeclarations, DeclarationPart } from './all.mjs';
 
 export function LexicallyScopedDeclarations(node) {
-  if (Array.isArray(node)) {
+  if (isArray(node)) {
     const declarations = [];
     for (const item of node) {
       declarations.push(...LexicallyScopedDeclarations(item));

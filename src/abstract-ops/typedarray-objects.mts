@@ -1,7 +1,8 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { ObjectValue, Value, NumberValue } from '../value.mjs';
-import { Q, X } from '../completion.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X, unused,
+} from '../completion.mjs';
 import {
   Assert,
   ToInt8,
@@ -24,6 +25,7 @@ import {
   IntegerIndexedObjectCreate,
   GetPrototypeFromConstructor,
   AllocateArrayBuffer,
+  type ConstructorObject,
 } from './all.mjs';
 
 export const typedArrayInfoByName = {
@@ -95,13 +97,22 @@ export const typedArrayInfoByName = {
   },
 };
 
-export const typedArrayInfoByType = {};
-Object.values(typedArrayInfoByName).forEach((v) => {
-  typedArrayInfoByType[v.ElementType] = v;
-});
+export const typedArrayInfoByType = {
+  Int8: typedArrayInfoByName.Int8Array,
+  Uint8: typedArrayInfoByName.Uint8Array,
+  Uint8C: typedArrayInfoByName.Uint8ClampedArray,
+  Int16: typedArrayInfoByName.Int16Array,
+  Uint16: typedArrayInfoByName.Uint16Array,
+  Int32: typedArrayInfoByName.Int32Array,
+  Uint32: typedArrayInfoByName.Uint32Array,
+  BigInt64: typedArrayInfoByName.BigInt64Array,
+  BigUint64: typedArrayInfoByName.BigUint64Array,
+  Float32: typedArrayInfoByName.Float32Array,
+  Float64: typedArrayInfoByName.Float64Array,
+};
 
 /** https://tc39.es/ecma262/#sec-validatetypedarray */
-export function ValidateTypedArray(O) {
+export function ValidateTypedArray(O: Value): unused | ThrowCompletion {
   // 1. Perform ? RequireInternalSlot(O, [[TypedArrayName]]).
   Q(RequireInternalSlot(O, 'TypedArrayName'));
   // 2. Assert: O has a [[ViewedArrayBuffer]] internal slot.
@@ -117,7 +128,7 @@ export function ValidateTypedArray(O) {
 }
 
 // #typedarray-create
-export function TypedArrayCreate(constructor, argumentList) {
+export function TypedArrayCreate(constructor: ConstructorObject, argumentList: readonly Value[]) {
   // 1. Let newTypedArray be ? Construct(constructor, argumentList).
   const newTypedArray = Q(Construct(constructor, argumentList));
   // 2. Perform ? ValidateTypedArray(newTypedArray).

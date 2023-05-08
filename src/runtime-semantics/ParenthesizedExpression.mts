@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Evaluate } from '../evaluator.mjs';
 
 /** https://tc39.es/ecma262/#sec-grouping-operator-runtime-semantics-evaluation */

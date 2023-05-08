@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   AsyncFromSyncIteratorContinuation,
@@ -8,6 +7,7 @@ import {
   IteratorNext,
   NewPromiseCapability,
   Assert,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { ObjectValue, Value } from '../value.mjs';
 import { IfAbruptRejectPromise, X } from '../completion.mjs';
@@ -130,7 +130,7 @@ function AsyncFromSyncIteratorPrototype_throw([value], { thisValue }) {
   return X(AsyncFromSyncIteratorContinuation(result, promiseCapability));
 }
 
-export function bootstrapAsyncFromSyncIteratorPrototype(realmRec) {
+export function bootstrapAsyncFromSyncIteratorPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['next', AsyncFromSyncIteratorPrototype_next, 0],
     ['return', AsyncFromSyncIteratorPrototype_return, 0],

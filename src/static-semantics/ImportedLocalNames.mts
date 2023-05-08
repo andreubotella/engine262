@@ -1,4 +1,3 @@
-// @ts-nocheck
 /** https://tc39.es/ecma262/#sec-importedlocalnames */
 export function ImportedLocalNames(importEntries) {
   // 1. Let localNames be a new empty List.

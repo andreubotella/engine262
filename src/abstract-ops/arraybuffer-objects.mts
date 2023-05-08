@@ -1,9 +1,11 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
-  NumberValue, BigIntValue, BooleanValue, ObjectValue, Value,
+  NumberValue, BigIntValue, BooleanValue, ObjectValue, Value, DataBlock, NullValue,
 } from '../value.mjs';
-import { Q, X, NormalCompletion } from '../completion.mjs';
+import {
+  Q, X, NormalCompletion, ThrowCompletion, unused,
+} from '../completion.mjs';
+import { CastType, type Mutable } from '../helpers.mjs';
 import {
   Assert, OrdinaryCreateFromConstructor,
   isNonNegativeInteger, CreateByteDataBlock,
@@ -11,14 +13,26 @@ import {
   typedArrayInfoByType,
   F,
   Z,
+  type ConstructorObject,
 } from './all.mjs';
 
+/** https://tc39.es/ecma262/#sec-arraybuffer-objects */
+export interface ArrayBufferObject extends ObjectValue {
+  ArrayBufferData: DataBlock | NullValue;
+  ArrayBufferByteLength: number;
+  readonly ArrayBufferDetachKey?: Value;
+  [Symbol.toStringTag]?: 'ArrayBufferObject';
+}
+/** https://tc39.es/ecma262/#sec-typedarray-objects */
+export type TypedArrayElementType = 'Int8' | 'Uint8' | 'Uint8C' | 'Int16' | 'Uint16' | 'Int32' | 'Uint32' | 'BigInt64' | 'BigUint64' | 'Float32' | 'Float64';
+
 /** https://tc39.es/ecma262/#sec-allocatearraybuffer */
-export function AllocateArrayBuffer(constructor, byteLength) {
+export function AllocateArrayBuffer(constructor: ConstructorObject, byteLength: number): NormalCompletion<ArrayBufferObject> | ThrowCompletion {
   // 1. Let obj be ? OrdinaryCreateFromConstructor(constructor, "%ArrayBuffer.prototype%", « [[ArrayBufferData]], [[ArrayBufferByteLength]], [[ArrayBufferDetachKey]] »).
   const obj = Q(OrdinaryCreateFromConstructor(constructor, '%ArrayBuffer.prototype%', [
     'ArrayBufferData', 'ArrayBufferByteLength', 'ArrayBufferDetachKey',
-  ]));
+  ])) as Mutable<ArrayBufferObject>;
+  obj[Symbol.toStringTag] = 'ArrayBufferObject';
   // 2. Assert: byteLength is a non-negative integer.
   Assert(isNonNegativeInteger(byteLength));
   // 3. Let block be ? CreateByteDataBlock(byteLength).
@@ -32,7 +46,7 @@ export function AllocateArrayBuffer(constructor, byteLength) {
 }
 
 /** https://tc39.es/ecma262/#sec-isdetachedbuffer */
-export function IsDetachedBuffer(arrayBuffer) {
+export function IsDetachedBuffer(arrayBuffer: ArrayBufferObject): BooleanValue {
   // 1. Assert: Type(arrayBuffer) is Object and it has an [[ArrayBufferData]] internal slot.
   Assert(arrayBuffer instanceof ObjectValue && 'ArrayBufferData' in arrayBuffer);
   // 2. If arrayBuffer.[[ArrayBufferData]] is null, return true.
@@ -44,7 +58,7 @@ export function IsDetachedBuffer(arrayBuffer) {
 }
 
 /** https://tc39.es/ecma262/#sec-detacharraybuffer */
-export function DetachArrayBuffer(arrayBuffer, key) {
+export function DetachArrayBuffer(arrayBuffer: ArrayBufferObject, key?: Value): unused | ThrowCompletion {
   // 1. Assert: Type(arrayBuffer) is Object and it has [[ArrayBufferData]], [[ArrayBufferByteLength]], and [[ArrayBufferDetachKey]] internal slots.
   Assert(arrayBuffer instanceof ObjectValue
          && 'ArrayBufferData' in arrayBuffer
@@ -64,26 +78,29 @@ export function DetachArrayBuffer(arrayBuffer, key) {
   arrayBuffer.ArrayBufferData = Value.null;
   // 6. Set arrayBuffer.[[ArrayBufferByteLength]] to 0.
   arrayBuffer.ArrayBufferByteLength = 0;
-  // 7. Return NormalCompletion(null).
-  return NormalCompletion(Value.null);
+  // 7. Return unused.
+  return unused;
 }
 
 /** https://tc39.es/ecma262/#sec-issharedarraybuffer */
-export function IsSharedArrayBuffer(_obj) {
+export function IsSharedArrayBuffer(_obj: ArrayBufferObject): BooleanValue {
   return Value.false;
 }
 
-export function CloneArrayBuffer(srcBuffer, srcByteOffset, srcLength, cloneConstructor) {
+/** https://tc39.es/ecma262/#sec-clonearraybuffer */
+export function CloneArrayBuffer(srcBuffer: ArrayBufferObject, srcByteOffset: number, srcLength: number, cloneConstructor: ConstructorObject): NormalCompletion<ArrayBufferObject> | ThrowCompletion {
   // 1. Assert: Type(srcBuffer) is Object and it has an [[ArrayBufferData]] internal slot.
   Assert(srcBuffer instanceof ObjectValue && 'ArrayBufferData' in srcBuffer);
   // 2. Assert: IsConstructor(cloneConstructor) is true.
   Assert(IsConstructor(cloneConstructor) === Value.true);
   // 3. Let targetBuffer be ? AllocateArrayBuffer(cloneConstructor, srcLength).
   const targetBuffer = Q(AllocateArrayBuffer(cloneConstructor, srcLength));
+  CastType<DataBlock>(targetBuffer.ArrayBufferData); // newly created
   // 4. If IsDetachedBuffer(srcBuffer) is true, throw a TypeError exception.
   if (IsDetachedBuffer(srcBuffer) === Value.true) {
     return surroundingAgent.Throw('TypeError', 'ArrayBufferDetached');
   }
+  CastType<DataBlock>(srcBuffer.ArrayBufferData);
   // 5. Let srcBlock be srcBuffer.[[ArrayBufferData]].
   const srcBlock = srcBuffer.ArrayBufferData;
   // 6. Let targetBlock be targetBuffer.[[ArrayBufferData]].
@@ -95,7 +112,7 @@ export function CloneArrayBuffer(srcBuffer, srcByteOffset, srcLength, cloneConst
 }
 
 /** https://tc39.es/ecma262/#sec-isbigintelementtype */
-export function IsBigIntElementType(type) {
+export function IsBigIntElementType(type: TypedArrayElementType): BooleanValue {
   // 1. If type is BigUint64 or BigInt64, return true.
   if (type === 'BigUint64' || type === 'BigInt64') {
     return Value.true;
@@ -109,20 +126,21 @@ const throwawayDataView = new DataView(throwawayBuffer);
 const throwawayArray = new Uint8Array(throwawayBuffer);
 
 /** https://tc39.es/ecma262/#sec-rawbytestonumeric */
-export function RawBytesToNumeric(type, rawBytes, isLittleEndian) {
+export function RawBytesToNumeric(type: TypedArrayElementType, rawBytes: number[], isLittleEndian: BooleanValue): NumberValue | BigIntValue {
   // 1. Let elementSize be the Element Size value specified in Table 61 for Element Type type.
   const elementSize = typedArrayInfoByType[type].ElementSize;
   Assert(elementSize === rawBytes.length);
   const dataViewType = type === 'Uint8C' ? 'Uint8' : type;
   Object.assign(throwawayArray, rawBytes);
   const result = throwawayDataView[`get${dataViewType}`](0, isLittleEndian === Value.true);
-  return IsBigIntElementType(type) === Value.true ? Z(result) : F(result);
+  return IsBigIntElementType(type) === Value.true ? Z(result as bigint) : F(result as number);
 }
 
 /** https://tc39.es/ecma262/#sec-getvaluefrombuffer */
-export function GetValueFromBuffer(arrayBuffer, byteIndex, type, isTypedArray, order, isLittleEndian) {
+export function GetValueFromBuffer(arrayBuffer: ArrayBufferObject, byteIndex: number, type: TypedArrayElementType, isTypedArray: BooleanValue, order: 'SeqCst' | 'Unordered', isLittleEndian?: BooleanValue): NumberValue | BigIntValue {
   // 1. Assert: IsDetachedBuffer(arrayBuffer) is false.
   Assert(IsDetachedBuffer(arrayBuffer) === Value.false);
+  CastType<DataBlock>(arrayBuffer.ArrayBufferData);
   // 2. Assert: There are sufficient bytes in arrayBuffer starting at byteIndex to represent a value of type.
   // 3. Assert: byteIndex is a non-negative integer.
   Assert(isNonNegativeInteger(byteIndex));
@@ -150,23 +168,27 @@ const float64NaNLE = Object.freeze([0, 0, 0, 0, 0, 0, 248, 127]);
 const float64NaNBE = Object.freeze([127, 248, 0, 0, 0, 0, 0, 0]);
 
 /** https://tc39.es/ecma262/#sec-numerictorawbytes */
-export function NumericToRawBytes(type, value, isLittleEndian) {
+export function NumericToRawBytes(type: TypedArrayElementType, value: NumberValue | BigIntValue, isLittleEndian: BooleanValue): number[] {
   Assert(isLittleEndian instanceof BooleanValue);
-  isLittleEndian = isLittleEndian === Value.true;
+  const isLittleEndianB = isLittleEndian === Value.true;
   let rawBytes;
   // One day, we will write our own IEEE 754 and two's complement encoder…
   if (type === 'Float32') {
+    // NON-SPEC assert
+    Assert(value instanceof NumberValue);
     if (Number.isNaN(value.numberValue())) {
-      rawBytes = isLittleEndian ? [...float32NaNLE] : [...float32NaNBE];
+      rawBytes = isLittleEndianB ? [...float32NaNLE] : [...float32NaNBE];
     } else {
-      throwawayDataView.setFloat32(0, value.numberValue(), isLittleEndian);
+      throwawayDataView.setFloat32(0, value.numberValue(), isLittleEndianB);
       rawBytes = [...throwawayArray.subarray(0, 4)];
     }
   } else if (type === 'Float64') {
+    // NON-SPEC assert
+    Assert(value instanceof NumberValue);
     if (Number.isNaN(value.numberValue())) {
-      rawBytes = isLittleEndian ? [...float64NaNLE] : [...float64NaNBE];
+      rawBytes = isLittleEndianB ? [...float64NaNLE] : [...float64NaNBE];
     } else {
-      throwawayDataView.setFloat64(0, value.numberValue(), isLittleEndian);
+      throwawayDataView.setFloat64(0, value.numberValue(), isLittleEndianB);
       rawBytes = [...throwawayArray.subarray(0, 8)];
     }
   } else {
@@ -177,16 +199,17 @@ export function NumericToRawBytes(type, value, isLittleEndian) {
     // c. Let intValue be convOp(value) treated as a mathematical value, whether the result is a BigInt or Number.
     const intValue = X(convOp(value));
     const dataViewType = type === 'Uint8C' ? 'Uint8' : type;
-    throwawayDataView[`set${dataViewType}`](0, intValue.bigintValue ? intValue.bigintValue() : intValue.numberValue(), isLittleEndian);
+    throwawayDataView[`set${dataViewType}`](0, intValue instanceof BigIntValue ? intValue.bigintValue() : intValue.numberValue(), isLittleEndianB);
     rawBytes = [...throwawayArray.subarray(0, n)];
   }
   return rawBytes;
 }
 
 /** https://tc39.es/ecma262/#sec-setvalueinbuffer */
-export function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isTypedArray, order, isLittleEndian) {
+export function SetValueInBuffer(arrayBuffer: ArrayBufferObject, byteIndex: number, type: TypedArrayElementType, value: NumberValue | BigIntValue, isTypedArray: BooleanValue, order: 'SeqCst' | 'Unordered' | 'Init', isLittleEndian?: BooleanValue): unused {
   // 1. Assert: IsDetachedBuffer(arrayBuffer) is false.
   Assert(IsDetachedBuffer(arrayBuffer) === Value.false);
+  CastType<DataBlock>(arrayBuffer.ArrayBufferData);
   // 2. Assert: There are sufficient bytes in arrayBuffer starting at byteIndex to represent a value of type.
   // 3. Assert: byteIndex is a non-negative integer.
   Assert(isNonNegativeInteger(byteIndex));
@@ -214,6 +237,6 @@ export function SetValueInBuffer(arrayBuffer, byteIndex, type, value, isTypedArr
   rawBytes.forEach((byte, i) => {
     block[byteIndex + i] = byte;
   });
-  // 11. Return NormalCompletion(undefined).
-  return NormalCompletion(Value.undefined);
+  // 11. Return unused.
+  return unused;
 }

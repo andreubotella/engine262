@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   SymbolValue,
@@ -17,6 +16,7 @@ import {
   ToString,
   ToUint16,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { UTF16EncodeCodePoint } from '../static-semantics/all.mjs';
 import { Q, X } from '../completion.mjs';
@@ -110,7 +110,7 @@ function String_raw([template = Value.undefined, ...substitutions]) {
   }
 }
 
-export function bootstrapString(realmRec) {
+export function bootstrapString(realmRec: Realm) {
   const stringConstructor = bootstrapConstructor(realmRec, StringConstructor, 'String', 1, realmRec.Intrinsics['%String.prototype%'], [
     ['fromCharCode', String_fromCharCode, 1],
     ['fromCodePoint', String_fromCodePoint, 1],

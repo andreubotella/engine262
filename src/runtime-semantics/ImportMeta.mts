@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { HostGetImportMetaProperties, HostFinalizeImportMeta } from '../engine.mjs';
 import { ObjectValue, Value } from '../value.mjs';
 import {

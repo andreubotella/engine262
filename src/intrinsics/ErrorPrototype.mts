@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   surroundingAgent,
 } from '../engine.mjs';
@@ -8,6 +7,7 @@ import {
 } from '../value.mjs';
 import {
   Get,
+  Realm,
   ToString,
 } from '../abstract-ops/all.mjs';
 import { Q } from '../completion.mjs';
@@ -49,7 +49,7 @@ function ErrorProto_toString(args, { thisValue }) {
   return Value(`${name.stringValue()}: ${msg.stringValue()}`);
 }
 
-export function bootstrapErrorPrototype(realmRec) {
+export function bootstrapErrorPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['toString', ErrorProto_toString, 0],
     ['message', Value('')],

@@ -1,11 +1,15 @@
-// @ts-nocheck
 import {
   Descriptor,
   ObjectValue,
   SymbolValue, JSStringValue, UndefinedValue, NullValue,
   Value,
+  type PropertyKeyValue,
+  type OrdinaryObject,
+  BooleanValue,
 } from '../value.mjs';
-import { Q, X } from '../completion.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X,
+} from '../completion.mjs';
 import {
   Assert,
   Call,
@@ -21,15 +25,18 @@ import {
   SameValue,
   MakeBasicObject,
   isArrayIndex,
+  type FunctionObject,
+  type ConstructorObject,
 } from './all.mjs';
+import { CastType } from '../helpers.mjs';
 
 // 9.1.1.1 OrdinaryGetPrototypeOf
-export function OrdinaryGetPrototypeOf(O) {
+export function OrdinaryGetPrototypeOf(O: OrdinaryObject): ObjectValue | NullValue {
   return O.Prototype;
 }
 
 // 9.1.2.1 OrdinarySetPrototypeOf
-export function OrdinarySetPrototypeOf(O, V) {
+export function OrdinarySetPrototypeOf(O: OrdinaryObject, V: ObjectValue | NullValue): BooleanValue {
   Assert(V instanceof ObjectValue || V instanceof NullValue);
 
   const current = O.Prototype;
@@ -43,13 +50,14 @@ export function OrdinarySetPrototypeOf(O, V) {
   let p = V;
   let done = false;
   while (done === false) {
-    if (p === Value.null) {
+    if (p instanceof NullValue) {
       done = true;
     } else if (SameValue(p, O) === Value.true) {
       return Value.false;
     } else if (p.GetPrototypeOf !== ObjectValue.prototype.GetPrototypeOf) {
       done = true;
     } else {
+      CastType<OrdinaryObject>(p); // checked in p.GetPrototypeOf !== ObjectValue.prototype.GetPrototypeOf
       p = p.Prototype;
     }
   }
@@ -58,18 +66,18 @@ export function OrdinarySetPrototypeOf(O, V) {
 }
 
 // 9.1.3.1 OrdinaryIsExtensible
-export function OrdinaryIsExtensible(O) {
+export function OrdinaryIsExtensible(O: OrdinaryObject): BooleanValue {
   return O.Extensible;
 }
 
 // 9.1.4.1 OrdinaryPreventExtensions
-export function OrdinaryPreventExtensions(O) {
+export function OrdinaryPreventExtensions(O: OrdinaryObject): BooleanValue {
   O.Extensible = Value.false;
   return Value.true;
 }
 
 // 9.1.5.1 OrdinaryGetOwnProperty
-export function OrdinaryGetOwnProperty(O, P) {
+export function OrdinaryGetOwnProperty(O: OrdinaryObject, P: PropertyKeyValue): Descriptor | UndefinedValue {
   Assert(IsPropertyKey(P));
 
   if (!O.properties.has(P)) {
@@ -78,7 +86,7 @@ export function OrdinaryGetOwnProperty(O, P) {
 
   const D = Descriptor({});
 
-  const x = O.properties.get(P);
+  const x = O.properties.get(P)!;
 
   if (IsDataDescriptor(x)) {
     D.Value = x.Value;
@@ -94,22 +102,22 @@ export function OrdinaryGetOwnProperty(O, P) {
 }
 
 // 9.1.6.1 OrdinaryDefineOwnProperty
-export function OrdinaryDefineOwnProperty(O, P, Desc) {
+export function OrdinaryDefineOwnProperty(O: OrdinaryObject, P: PropertyKeyValue, Desc: Descriptor): NormalCompletion<BooleanValue> | ThrowCompletion {
   const current = Q(O.GetOwnProperty(P));
   const extensible = Q(IsExtensible(O));
   return ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current);
 }
 
 /** https://tc39.es/ecma262/#sec-iscompatiblepropertydescriptor */
-export function IsCompatiblePropertyDescriptor(Extensible, Desc, Current) {
+export function IsCompatiblePropertyDescriptor(Extensible: BooleanValue, Desc: Descriptor, Current: Descriptor): BooleanValue {
   return ValidateAndApplyPropertyDescriptor(Value.undefined, Value.undefined, Extensible, Desc, Current);
 }
 
 // 9.1.6.3 ValidateAndApplyPropertyDescriptor
-export function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, current) {
+export function ValidateAndApplyPropertyDescriptor(O: OrdinaryObject | UndefinedValue, P: PropertyKeyValue, extensible: BooleanValue, Desc: Descriptor, current: Descriptor | UndefinedValue): BooleanValue {
   Assert(O === Value.undefined || IsPropertyKey(P));
 
-  if (current === Value.undefined) {
+  if (current instanceof UndefinedValue) {
     if (extensible === Value.false) {
       return Value.false;
     }
@@ -226,7 +234,7 @@ export function ValidateAndApplyPropertyDescriptor(O, P, extensible, Desc, curre
 }
 
 // 9.1.7.1 OrdinaryHasProperty
-export function OrdinaryHasProperty(O, P) {
+export function OrdinaryHasProperty(O: OrdinaryObject, P: PropertyKeyValue): NormalCompletion<BooleanValue> | ThrowCompletion {
   Assert(IsPropertyKey(P));
 
   const hasOwn = Q(O.GetOwnProperty(P));
@@ -241,7 +249,7 @@ export function OrdinaryHasProperty(O, P) {
 }
 
 // 9.1.8.1
-export function OrdinaryGet(O, P, Receiver) {
+export function OrdinaryGet(O: OrdinaryObject, P: PropertyKeyValue, Receiver: Value): NormalCompletion | ThrowCompletion {
   Assert(IsPropertyKey(P));
 
   const desc = Q(O.GetOwnProperty(P));
@@ -264,14 +272,14 @@ export function OrdinaryGet(O, P, Receiver) {
 }
 
 // 9.1.9.1 OrdinarySet
-export function OrdinarySet(O, P, V, Receiver) {
+export function OrdinarySet(O: OrdinaryObject, P: PropertyKeyValue, V: Value, Receiver: Value): NormalCompletion<BooleanValue> | ThrowCompletion {
   Assert(IsPropertyKey(P));
   const ownDesc = Q(O.GetOwnProperty(P));
   return OrdinarySetWithOwnDescriptor(O, P, V, Receiver, ownDesc);
 }
 
 // 9.1.9.2 OrdinarySetWithOwnDescriptor
-export function OrdinarySetWithOwnDescriptor(O, P, V, Receiver, ownDesc) {
+export function OrdinarySetWithOwnDescriptor(O: OrdinaryObject, P: PropertyKeyValue, V: Value, Receiver: Value, ownDesc: Descriptor | UndefinedValue): NormalCompletion<BooleanValue> | ThrowCompletion {
   Assert(IsPropertyKey(P));
 
   if (ownDesc instanceof UndefinedValue) {
@@ -319,7 +327,7 @@ export function OrdinarySetWithOwnDescriptor(O, P, V, Receiver, ownDesc) {
 }
 
 // 9.1.10.1 OrdinaryDelete
-export function OrdinaryDelete(O, P) {
+export function OrdinaryDelete(O: OrdinaryObject, P: PropertyKeyValue): NormalCompletion<BooleanValue> | ThrowCompletion {
   Assert(IsPropertyKey(P));
   const desc = Q(O.GetOwnProperty(P));
   if (desc instanceof UndefinedValue) {
@@ -333,8 +341,8 @@ export function OrdinaryDelete(O, P) {
 }
 
 // 9.1.11.1
-export function OrdinaryOwnPropertyKeys(O) {
-  const keys = [];
+export function OrdinaryOwnPropertyKeys(O: OrdinaryObject): PropertyKeyValue[] {
+  const keys: PropertyKeyValue[] = [];
 
   // For each own property key P of O that is an array index, in ascending numeric index order, do
   //   Add P as the last element of keys.
@@ -343,7 +351,7 @@ export function OrdinaryOwnPropertyKeys(O) {
       keys.push(P);
     }
   }
-  keys.sort((a, b) => Number.parseInt(a.stringValue(), 10) - Number.parseInt(b.stringValue(), 10));
+  (keys as JSStringValue[]).sort((a, b) => Number.parseInt(a.stringValue(), 10) - Number.parseInt(b.stringValue(), 10));
 
   // For each own property key P of O such that Type(P) is String and
   // P is not an array index, in ascending chronological order of property creation, do
@@ -367,7 +375,7 @@ export function OrdinaryOwnPropertyKeys(O) {
 }
 
 /** https://tc39.es/ecma262/#sec-ordinaryobjectcreate */
-export function OrdinaryObjectCreate(proto, additionalInternalSlotsList) {
+export function OrdinaryObjectCreate<const T extends readonly string[] = never[]>(proto: ObjectValue | NullValue, additionalInternalSlotsList?: T): OrdinaryObject & { [key in T[number]]: unknown } {
   // 1. Let internalSlotsList be « [[Prototype]], [[Extensible]] ».
   const internalSlotsList = ['Prototype', 'Extensible'];
   // 2. If additionalInternalSlotsList is present, append each of its elements to internalSlotsList.
@@ -379,18 +387,18 @@ export function OrdinaryObjectCreate(proto, additionalInternalSlotsList) {
   // 4. Set O.[[Prototype]] to proto.
   O.Prototype = proto;
   // 5. Return O.
-  return O;
+  return O as OrdinaryObject & { [key in T[number]]: unknown };
 }
 
 // 9.1.13 OrdinaryCreateFromConstructor
-export function OrdinaryCreateFromConstructor(constructor, intrinsicDefaultProto, internalSlotsList) {
+export function OrdinaryCreateFromConstructor<const T extends readonly string[] = never[]>(constructor: ConstructorObject, intrinsicDefaultProto: string, internalSlotsList?: T): NormalCompletion<OrdinaryObject & { [key in T[number]]: unknown }> | ThrowCompletion {
   // Assert: intrinsicDefaultProto is a String value that is this specification's name of an intrinsic object.
   const proto = Q(GetPrototypeFromConstructor(constructor, intrinsicDefaultProto));
-  return OrdinaryObjectCreate(proto, internalSlotsList);
+  return OrdinaryObjectCreate(proto, internalSlotsList) as NormalCompletion<OrdinaryObject & { [key in T[number]]: unknown }>;
 }
 
 // 9.1.14 GetPrototypeFromConstructor
-export function GetPrototypeFromConstructor(constructor, intrinsicDefaultProto) {
+export function GetPrototypeFromConstructor(constructor: FunctionObject, intrinsicDefaultProto: string): NormalCompletion<ObjectValue> | ThrowCompletion {
   // Assert: intrinsicDefaultProto is a String value that
   // is this specification's name of an intrinsic object.
   Assert(IsCallable(constructor) === Value.true);
@@ -399,5 +407,5 @@ export function GetPrototypeFromConstructor(constructor, intrinsicDefaultProto) 
     const realm = Q(GetFunctionRealm(constructor));
     proto = realm.Intrinsics[intrinsicDefaultProto];
   }
-  return proto;
+  return proto as ObjectValue;
 }

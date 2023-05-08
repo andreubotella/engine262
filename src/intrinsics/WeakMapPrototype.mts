@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   SameValue,
   RequireInternalSlot,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   ObjectValue,
@@ -116,7 +116,7 @@ function WeakMapProto_set([key = Value.undefined, value = Value.undefined], { th
   return M;
 }
 
-export function bootstrapWeakMapPrototype(realmRec) {
+export function bootstrapWeakMapPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['delete', WeakMapProto_delete, 1],
     ['get', WeakMapProto_get, 1],

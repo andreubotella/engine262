@@ -1,12 +1,14 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
-  Descriptor, Value, ObjectValue, BooleanValue, JSStringValue,
+  Descriptor, Value, ObjectValue, BooleanValue, JSStringValue, UndefinedValue,
 } from '../value.mjs';
-import { Q, X } from '../completion.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X,
+} from '../completion.mjs';
 import { Evaluate_Pattern } from '../runtime-semantics/all.mjs';
 import { ParsePattern } from '../parse.mjs';
 import { isLineTerminator } from '../parser/Lexer.mjs';
+import { isArray } from '../helpers.mjs';
 import {
   ArrayCreate,
   Assert,
@@ -19,10 +21,17 @@ import {
   Set,
   ToString,
   F as toNumberValue,
+  type ConstructorObject,
+  type ArrayExoticObject,
 } from './all.mjs';
 
+/** https://tc39.es/ecma262/#sec-match-records */
+export interface MatchRecord {
+  readonly StartIndex: number;
+  readonly EndIndex: number;
+}
 /** https://tc39.es/ecma262/#sec-regexpalloc */
-export function RegExpAlloc(newTarget) {
+export function RegExpAlloc(newTarget: ConstructorObject): NormalCompletion<ObjectValue> | ThrowCompletion {
   const obj = Q(OrdinaryCreateFromConstructor(newTarget, '%RegExp.prototype%', ['RegExpMatcher', 'OriginalSource', 'OriginalFlags']));
   X(DefinePropertyOrThrow(obj, Value('lastIndex'), Descriptor({
     Writable: Value.true,
@@ -33,7 +42,7 @@ export function RegExpAlloc(newTarget) {
 }
 
 /** https://tc39.es/ecma262/#sec-regexpinitialize */
-export function RegExpInitialize(obj, pattern, flags) {
+export function RegExpInitialize(obj: ObjectValue, pattern: Value, flags: Value): NormalCompletion<ObjectValue> | ThrowCompletion {
   let P;
   // 1. If pattern is undefined, let P be the empty String.
   if (pattern === Value.undefined) {
@@ -65,7 +74,7 @@ export function RegExpInitialize(obj, pattern, flags) {
   const patternText = P.stringValue();
   const parseResult = ParsePattern(patternText, u);
   // 10. If parseResult is a non-empty List of SyntaxError objects, throw a SyntaxError exception.
-  if (Array.isArray(parseResult)) {
+  if (isArray(parseResult)) {
     return surroundingAgent.Throw(parseResult[0]);
   }
   obj.parsedPattern = parseResult;
@@ -87,13 +96,13 @@ export function RegExpInitialize(obj, pattern, flags) {
 }
 
 /** https://tc39.es/ecma262/#sec-regexpcreate */
-export function RegExpCreate(P, F) {
+export function RegExpCreate(P: Value, F: JSStringValue | UndefinedValue): NormalCompletion<ObjectValue> | ThrowCompletion {
   const obj = Q(RegExpAlloc(surroundingAgent.intrinsic('%RegExp%')));
   return Q(RegExpInitialize(obj, P, F));
 }
 
 /** https://tc39.es/ecma262/#sec-escaperegexppattern */
-export function EscapeRegExpPattern(P, _F) {
+export function EscapeRegExpPattern(P: JSStringValue, _F: JSStringValue): JSStringValue {
   const source = P.stringValue();
   if (source === '') {
     return Value('(:?)');
@@ -156,11 +165,11 @@ export function EscapeRegExpPattern(P, _F) {
 }
 
 /** https://tc39.es/ecma262/#sec-getstringindex */
-export function GetStringIndex(S, Input, e) {
+export function GetStringIndex(S: JSStringValue, Input: readonly string[], e: number): number {
   // 1. Assert: Type(S) is String.
   Assert(S instanceof JSStringValue);
   // 2. Assert: Input is a List of the code points of S interpreted as a UTF-16 encoded string.
-  Assert(Array.isArray(Input));
+  Assert(isArray(Input));
   // 3. Assert: e is an integer value ≥ 0.
   Assert(e >= 0);
   // 4. If S is the empty String, return 0.
@@ -182,7 +191,7 @@ export function GetStringIndex(S, Input, e) {
 }
 
 /** https://tc39.es/ecma262/#sec-getmatchstring */
-export function GetMatchString(S, match) {
+export function GetMatchString(S: JSStringValue, match: MatchRecord): JSStringValue {
   // 1. Assert: Type(S) is String.
   Assert(S instanceof JSStringValue);
   // 2. Assert: match is a Match Record.
@@ -196,7 +205,7 @@ export function GetMatchString(S, match) {
 }
 
 /** https://tc39.es/ecma262/#sec-getmatchindexpair */
-export function GetMatchIndexPair(S, match) {
+export function GetMatchIndexPair(S: JSStringValue, match: MatchRecord): ArrayExoticObject {
   // 1. Assert: Type(S) is String.
   Assert(S instanceof JSStringValue);
   // 2. Assert: match is a Match Record.
@@ -213,17 +222,17 @@ export function GetMatchIndexPair(S, match) {
 }
 
 /** https://tc39.es/ecma262/#sec-makematchindicesindexpairarray */
-export function MakeMatchIndicesIndexPairArray(S, indices, groupNames, hasGroups) {
+export function MakeMatchIndicesIndexPairArray(S: JSStringValue, indices: ReadonlyArray<MatchRecord | undefined>, groupNames: ReadonlyArray<JSStringValue | UndefinedValue>, hasGroups: BooleanValue): ArrayExoticObject {
   // 1. Assert: Type(S) is String.
   Assert(S instanceof JSStringValue);
   // 2. Assert: indices is a List.
-  Assert(Array.isArray(indices));
+  Assert(isArray(indices));
   // 3. Let n be the number of elements in indices.
   const n = indices.length;
   // 4. Assert: n < 2**32-1.
   Assert(n < (2 ** 32) - 1);
   // 5. Assert: groupNames is a List with _n_ - 1 elements.
-  Assert(Array.isArray(groupNames) && groupNames.length === n - 1);
+  Assert(isArray(groupNames) && groupNames.length === n - 1);
   // 6. NOTE: The groupNames List contains elements aligned with the indices List starting at indices[1].
   // 7. Assert: Type(hasGroups) is Boolean.
   Assert(hasGroups instanceof BooleanValue);
@@ -231,7 +240,7 @@ export function MakeMatchIndicesIndexPairArray(S, indices, groupNames, hasGroups
   // 9. Assert: The value of A's "length" property is n.
   const A = X(ArrayCreate(n));
   // 10. If hasGroups is true, then
-  let groups;
+  let groups: ObjectValue | UndefinedValue;
   if (hasGroups === Value.true) {
     // a. Let groups be ! ObjectCreate(null).
     groups = X(OrdinaryObjectCreate(Value.null));
@@ -267,7 +276,7 @@ export function MakeMatchIndicesIndexPairArray(S, indices, groupNames, hasGroups
 }
 
 /** https://tc39.es/ecma262/#sec-regexphasflag */
-export function RegExpHasFlag(R, codeUnit) {
+export function RegExpHasFlag(R: Value, codeUnit): NormalCompletion<BooleanValue | UndefinedValue> | ThrowCompletion {
   // 1. If Type(R) is not Object, throw a TypeError exception.
   if (!(R instanceof ObjectValue)) {
     return surroundingAgent.Throw('TypeError', 'NotATypeObject', 'RegExp', R);

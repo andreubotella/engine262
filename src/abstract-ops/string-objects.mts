@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Descriptor,
   ObjectValue,
@@ -6,8 +5,13 @@ import {
   JSStringValue,
   UndefinedValue,
   Value,
+  type PropertyKeyValue,
+  BooleanValue,
+  type WithPrototype,
+  type WithExtensible,
 } from '../value.mjs';
 import { X } from '../completion.mjs';
+import { CastType, type Mutable } from '../helpers.mjs';
 import {
   Assert,
   CanonicalNumericIndexString,
@@ -24,7 +28,13 @@ import {
   F,
 } from './all.mjs';
 
-function StringExoticGetOwnProperty(P) {
+/** https://tc39.es/ecma262/#sec-string-exotic-objects */
+export interface StringExoticObject extends ObjectValue, WithPrototype, WithExtensible {
+  readonly StringData: JSStringValue;
+  readonly Extensible: BooleanValue;
+}
+
+function StringExoticGetOwnProperty(this: StringExoticObject, P: PropertyKeyValue): Descriptor | UndefinedValue {
   const S = this;
   Assert(IsPropertyKey(P));
   const desc = OrdinaryGetOwnProperty(S, P);
@@ -34,7 +44,7 @@ function StringExoticGetOwnProperty(P) {
   return X(StringGetOwnProperty(S, P));
 }
 
-function StringExoticDefineOwnProperty(P, Desc) {
+function StringExoticDefineOwnProperty(this: StringExoticObject, P: PropertyKeyValue, Desc: Descriptor): BooleanValue {
   const S = this;
   Assert(IsPropertyKey(P));
   const stringDesc = X(StringGetOwnProperty(S, P));
@@ -45,9 +55,9 @@ function StringExoticDefineOwnProperty(P, Desc) {
   return X(OrdinaryDefineOwnProperty(S, P, Desc));
 }
 
-function StringExoticOwnPropertyKeys() {
+function StringExoticOwnPropertyKeys(this: StringExoticObject): PropertyKeyValue[] {
   const O = this;
-  const keys = [];
+  const keys: PropertyKeyValue[] = [];
   const str = O.StringData;
   Assert(str instanceof JSStringValue);
   const len = str.stringValue().length;
@@ -64,6 +74,7 @@ function StringExoticOwnPropertyKeys() {
   for (const P of O.properties.keys()) {
     // This is written with two nested ifs to work around https://github.com/devsnek/engine262/issues/24
     if (isArrayIndex(P)) {
+      CastType<JSStringValue>(P);
       if (X(ToIntegerOrInfinity(P)) >= len) {
         keys.push(P);
       }
@@ -92,11 +103,11 @@ function StringExoticOwnPropertyKeys() {
 }
 
 /** https://tc39.es/ecma262/#sec-stringcreate */
-export function StringCreate(value, prototype) {
+export function StringCreate(value: JSStringValue, prototype: ObjectValue): StringExoticObject {
   // 1. Assert: Type(value) is String.
   Assert(value instanceof JSStringValue);
   // 2. Let S be ! MakeBasicObject(« [[Prototype]], [[Extensible]], [[StringData]] »).
-  const S = X(MakeBasicObject(['Prototype', 'Extensible', 'StringData']));
+  const S = X(MakeBasicObject(['Prototype', 'Extensible', 'StringData'])) as Mutable<StringExoticObject>;
   // 3. Set S.[[Prototype]] to prototype.
   S.Prototype = prototype;
   // 4. Set S.[[StringData]] to value.
@@ -121,13 +132,13 @@ export function StringCreate(value, prototype) {
 }
 
 /** https://tc39.es/ecma262/#sec-stringgetownproperty */
-export function StringGetOwnProperty(S, P) {
+export function StringGetOwnProperty(S: StringExoticObject, P: PropertyKeyValue): Descriptor | UndefinedValue {
   Assert(S instanceof ObjectValue && 'StringData' in S);
   Assert(IsPropertyKey(P));
   if (!(P instanceof JSStringValue)) {
     return Value.undefined;
   }
-  const index = X(CanonicalNumericIndexString(P));
+  const index = CanonicalNumericIndexString(P);
   if (index instanceof UndefinedValue) {
     return Value.undefined;
   }

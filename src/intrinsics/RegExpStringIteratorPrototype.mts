@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { BooleanValue, JSStringValue, Value } from '../value.mjs';
 import {
@@ -11,6 +10,7 @@ import {
   Set,
   Yield,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { RegExpExec, AdvanceStringIndex } from './RegExpPrototype.mjs';
@@ -68,7 +68,7 @@ function RegExpStringIteratorPrototype_next(args, { thisValue }) {
   return Q(GeneratorResume(thisValue, undefined, kRegExpStringIteratorPrototype));
 }
 
-export function bootstrapRegExpStringIteratorPrototype(realmRec) {
+export function bootstrapRegExpStringIteratorPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['next', RegExpStringIteratorPrototype_next, 0],
   ], realmRec.Intrinsics['%IteratorPrototype%'], 'RegExp String Iterator');

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Evaluate } from '../evaluator.mjs';
 import { ReferenceRecord, Value } from '../value.mjs';
 import {

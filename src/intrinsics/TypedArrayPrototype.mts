@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Assert,
   Call,
@@ -26,6 +25,7 @@ import {
   typedArrayInfoByName,
   typedArrayInfoByType,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { surroundingAgent } from '../engine.mjs';
@@ -798,7 +798,7 @@ function TypedArrayProto_at([index = Value.undefined], { thisValue }) {
   return Q(Get(O, X(ToString(F(k)))));
 }
 
-export function bootstrapTypedArrayPrototype(realmRec) {
+export function bootstrapTypedArrayPrototype(realmRec: Realm) {
   const ArrayProto_toString = X(Get(realmRec.Intrinsics['%Array.prototype%'], Value('toString')));
   Assert(ArrayProto_toString instanceof ObjectValue);
 

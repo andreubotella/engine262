@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Assert, IsIntegralNumber, Z } from '../abstract-ops/all.mjs';
 import { Value, NumberValue } from '../value.mjs';

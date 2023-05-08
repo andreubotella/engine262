@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { InstantiateAsyncGeneratorFunctionExpression } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-asyncgenerator-definitions-evaluation */

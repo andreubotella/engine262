@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { JSStringValue, Value } from '../value.mjs';
 import {
   Assert,

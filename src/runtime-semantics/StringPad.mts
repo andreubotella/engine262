@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Value } from '../value.mjs';
 import { Assert, ToString, ToLength } from '../abstract-ops/all.mjs';
 import { Q } from '../completion.mjs';

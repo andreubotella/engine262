@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { X } from '../completion.mjs';
 import { CodePointAt } from './all.mjs';
 

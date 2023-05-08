@@ -1,14 +1,17 @@
-// @ts-nocheck
 // This file covers abstract operations defined in
 // https://tc39.es/ecma262/#sec-import-calls
 
 import {
-  Call, GetModuleNamespace, PerformPromiseThen, Value,
+  AbstractModuleRecord,
+  Call, GetModuleNamespace, PerformPromiseThen, PromiseCapabilityRecord, Value,
 } from '../api.mjs';
-import { AbruptCompletion, X } from '../completion.mjs';
+import {
+  AbruptCompletion, ThrowCompletion, X, unused, type NormalCompletionObject, NormalCompletion,
+} from '../completion.mjs';
+import { CastType } from '../helpers.mjs';
 
 /** https://tc39.es/ecma262/#sec-ContinueDynamicImport */
-export function ContinueDynamicImport(promiseCapability, moduleCompletion) {
+export function ContinueDynamicImport(promiseCapability: PromiseCapabilityRecord, moduleCompletion: NormalCompletionObject<AbstractModuleRecord> | ThrowCompletion): unused {
   // 1. If moduleCompletion is an abrupt completion, then
   if (moduleCompletion instanceof AbruptCompletion) {
     // a. Perform ! Call(promiseCapability.[[Reject]], undefined, « moduleCompletion.[[Value]] »).
@@ -16,6 +19,7 @@ export function ContinueDynamicImport(promiseCapability, moduleCompletion) {
     // b. Return unused.
     return;
   }
+  CastType<NormalCompletionObject<AbstractModuleRecord>>(moduleCompletion);
   // 2. Let module be moduleCompletion.[[Value]].
   const module = moduleCompletion.Value;
 

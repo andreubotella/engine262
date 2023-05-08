@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   ObjectValue,
   SymbolValue,
@@ -10,6 +9,7 @@ import {
 } from '../engine.mjs';
 import {
   Assert,
+  Realm,
   SymbolDescriptiveString,
 } from '../abstract-ops/all.mjs';
 import { Q } from '../completion.mjs';
@@ -64,7 +64,7 @@ function SymbolProto_toPrimitive(argList, { thisValue }) {
   return Q(thisSymbolValue(thisValue));
 }
 
-export function bootstrapSymbolPrototype(realmRec) {
+export function bootstrapSymbolPrototype(realmRec: Realm) {
   const override = {
     Writable: Value.false,
     Enumerable: Value.false,

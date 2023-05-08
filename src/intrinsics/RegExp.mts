@@ -1,10 +1,10 @@
-// @ts-nocheck
 import {
   surroundingAgent,
 } from '../engine.mjs';
 import {
   Get,
   IsRegExp,
+  Realm,
   RegExpAlloc,
   RegExpInitialize,
   SameValue,
@@ -77,7 +77,7 @@ function RegExp_speciesGetter(args, { thisValue }) {
   return thisValue;
 }
 
-export function bootstrapRegExp(realmRec) {
+export function bootstrapRegExp(realmRec: Realm) {
   const proto = realmRec.Intrinsics['%RegExp.prototype%'];
 
   const cons = bootstrapConstructor(realmRec, RegExpConstructor, 'RegExp', 2, proto, [

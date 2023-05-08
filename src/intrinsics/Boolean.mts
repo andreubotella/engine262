@@ -1,6 +1,6 @@
-// @ts-nocheck
 import {
   OrdinaryCreateFromConstructor,
+  Realm,
   ToBoolean,
 } from '../abstract-ops/all.mjs';
 import { Value } from '../value.mjs';
@@ -23,7 +23,7 @@ function BooleanConstructor([value = Value.undefined], { NewTarget }) {
   return O;
 }
 
-export function bootstrapBoolean(realmRec) {
+export function bootstrapBoolean(realmRec: Realm) {
   const cons = bootstrapConstructor(
     realmRec,
     BooleanConstructor,

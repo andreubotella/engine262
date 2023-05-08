@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Q } from '../completion.mjs';
 import { Evaluate } from '../evaluator.mjs';
 import { GetValue } from '../abstract-ops/all.mjs';

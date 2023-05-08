@@ -1,6 +1,7 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
-import { Value, Descriptor, PrivateName } from '../value.mjs';
+import {
+  Value, Descriptor, PrivateName, UndefinedValue,
+} from '../value.mjs';
 import {
   OrdinaryObjectCreate,
   OrdinaryFunctionCreate,
@@ -8,6 +9,7 @@ import {
   SetFunctionName,
   MakeMethod,
   sourceTextMatchedBy,
+  type FunctionObject,
 } from '../abstract-ops/all.mjs';
 import {
   Q, X,
@@ -16,14 +18,35 @@ import {
 import { OutOfRange } from '../helpers.mjs';
 import { DefineMethod, Evaluate_PropertyName } from './all.mjs';
 
+export interface PrivateElementRecordField {
+  Key: PrivateName;
+  Kind: 'field';
+  Value: Value;
+  Get?: never;
+  Set?: never;
+}
+export interface PrivateElementRecordMethod {
+  Key: PrivateName;
+  Kind: 'method';
+  Value: Value;
+  Get?: never;
+  Set?: never;
+}
+export interface PrivateElementRecordAccessor {
+  Key: PrivateName;
+  Kind: 'accessor';
+  Value?: undefined;
+  Get: FunctionObject | UndefinedValue;
+  Set: FunctionObject | UndefinedValue;
+}
 /** https://tc39.es/ecma262/#sec-privateelement-specification-type */
 export class PrivateElementRecord {
-  Key;
-  Kind;
-  Value;
-  Get;
-  Set;
-  constructor(init) {
+  Key: PrivateName;
+  Kind: 'field' | 'method' | 'accessor';
+  Value: Value;
+  Get: FunctionObject | UndefinedValue;
+  Set: FunctionObject | UndefinedValue;
+  constructor(init: PrivateElementRecordField | PrivateElementRecordMethod | PrivateElementRecordAccessor) {
     this.Key = init.Key;
     this.Kind = init.Kind;
     this.Value = init.Value;

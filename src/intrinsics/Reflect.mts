@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Call,
@@ -9,6 +8,7 @@ import {
   IsCallable,
   IsConstructor,
   PrepareForTailCall,
+  Realm,
   ToPropertyDescriptor,
   ToPropertyKey,
 } from '../abstract-ops/all.mjs';
@@ -189,7 +189,7 @@ function Reflect_setPrototypeOf([target = Value.undefined, proto = Value.undefin
   return Q(target.SetPrototypeOf(proto));
 }
 
-export function bootstrapReflect(realmRec) {
+export function bootstrapReflect(realmRec: Realm) {
   const reflect = bootstrapPrototype(realmRec, [
     ['apply', Reflect_apply, 3],
     ['construct', Reflect_construct, 2],

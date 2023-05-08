@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Value } from '../value.mjs';
 import {
@@ -32,7 +31,7 @@ import {
   ReturnIfAbrupt,
   EnsureCompletion,
 } from '../completion.mjs';
-import { OutOfRange } from '../helpers.mjs';
+import { OutOfRange, isArray } from '../helpers.mjs';
 import {
   Evaluate_PropertyName,
   NamedEvaluation,
@@ -189,7 +188,7 @@ function* DestructuringAssignmentEvaluation_ArrayAssignmentPattern({ AssignmentE
 }
 
 function* IteratorDestructuringAssignmentEvaluation(node, iteratorRecord) {
-  if (Array.isArray(node)) {
+  if (isArray(node)) {
     for (const n of node) {
       Q(yield* IteratorDestructuringAssignmentEvaluation(n, iteratorRecord));
     }

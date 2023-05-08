@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Evaluate_StatementList } from './all.mjs';
 
 // ScriptBody : StatementList

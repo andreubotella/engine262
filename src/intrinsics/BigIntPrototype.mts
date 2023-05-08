@@ -1,9 +1,10 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   ObjectValue, BigIntValue, Value,
 } from '../value.mjs';
-import { Assert, ToIntegerOrInfinity, ToString } from '../abstract-ops/all.mjs';
+import {
+  Assert, Realm, ToIntegerOrInfinity, ToString,
+} from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { bootstrapPrototype } from './bootstrap.mjs';
 
@@ -66,7 +67,7 @@ function BigIntProto_valueOf(args, { thisValue }) {
   return Q(thisBigIntValue(thisValue));
 }
 
-export function bootstrapBigIntPrototype(realmRec) {
+export function bootstrapBigIntPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['toLocaleString', BigIntProto_toLocalString, 0],
     ['toString', BigIntProto_toString, 0],

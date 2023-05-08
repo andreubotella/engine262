@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Q, X } from '../completion.mjs';
 import { surroundingAgent } from '../engine.mjs';
 import { Value, wellKnownSymbols } from '../value.mjs';
@@ -16,6 +15,7 @@ import {
   ToString,
   TypedArrayCreate,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { bootstrapConstructor } from './bootstrap.mjs';
 
@@ -136,7 +136,7 @@ function TypedArray_speciesGetter(args, { thisValue }) {
   return thisValue;
 }
 
-export function bootstrapTypedArray(realmRec) {
+export function bootstrapTypedArray(realmRec: Realm) {
   const typedArrayConstructor = bootstrapConstructor(realmRec, TypedArrayConstructor, 'TypedArray', 0, realmRec.Intrinsics['%TypedArray.prototype%'], [
     ['from', TypedArray_from, 1],
     ['of', TypedArray_of, 0],

@@ -1,8 +1,8 @@
-// @ts-nocheck
+import { isArray } from '../helpers.mjs';
 import { BoundNames, TopLevelVarDeclaredNames } from './all.mjs';
 
 export function VarDeclaredNames(node) {
-  if (Array.isArray(node)) {
+  if (isArray(node)) {
     const names = [];
     for (const item of node) {
       names.push(...VarDeclaredNames(item));

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import unicodeCaseFoldingCommon from '@unicode/unicode-15.0.0/Case_Folding/C/symbols.js';
 import unicodeCaseFoldingSimple from '@unicode/unicode-15.0.0/Case_Folding/S/symbols.js';
 import { JSStringValue, Value } from '../value.mjs';
@@ -6,7 +5,7 @@ import { Assert, isNonNegativeInteger } from '../abstract-ops/all.mjs';
 import { CharacterValue, StringToCodePoints } from '../static-semantics/all.mjs';
 import { X } from '../completion.mjs';
 import { isLineTerminator, isWhitespace, isDecimalDigit } from '../parser/Lexer.mjs';
-import { OutOfRange } from '../helpers.mjs';
+import { OutOfRange, isArray } from '../helpers.mjs';
 import {
   UnicodeMatchProperty,
   UnicodeMatchPropertyValue,
@@ -1075,7 +1074,7 @@ export function Evaluate_Pattern(Pattern, flags) {
   function Evaluate_CharacterClass({ invert, ClassRanges }) {
     let A = new ConcreteCharSet([]);
     for (const range of ClassRanges) {
-      if (Array.isArray(range)) {
+      if (isArray(range)) {
         const B = Evaluate(range[0]);
         const C = Evaluate(range[1]);
         const D = CharacterRange(B, C);

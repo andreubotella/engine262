@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Assert, RequireObjectCoercible, ToString } from '../abstract-ops/all.mjs';
 import { Value } from '../value.mjs';
 import { Q } from '../completion.mjs';

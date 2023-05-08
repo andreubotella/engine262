@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ImportEntriesForModule, ModuleRequests } from './all.mjs';
 
 export function ImportEntries(node) {

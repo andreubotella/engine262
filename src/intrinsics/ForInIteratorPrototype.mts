@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Value, JSStringValue, ObjectValue } from '../value.mjs';
 import { surroundingAgent } from '../engine.mjs';
 import {
@@ -6,6 +5,7 @@ import {
   SameValue,
   OrdinaryObjectCreate,
   CreateIterResultObject,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q } from '../completion.mjs';
 import { bootstrapPrototype } from './bootstrap.mjs';
@@ -96,7 +96,7 @@ function ForInIteratorPrototype_next(args, { thisValue }) {
   }
 }
 
-export function bootstrapForInIteratorPrototype(realmRec) {
+export function bootstrapForInIteratorPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['next', ForInIteratorPrototype_next, 0],
   ], realmRec.Intrinsics['%IteratorPrototype%']);

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { HasInitializer } from './all.mjs';
 
 export function ExpectedArgumentCount(FormalParameterList) {

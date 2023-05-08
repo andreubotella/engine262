@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Assert,
@@ -12,6 +11,7 @@ import {
   NewPromiseCapability,
   PerformPromiseThen,
   PromiseResolve,
+  Realm,
   SpeciesConstructor,
 } from '../abstract-ops/all.mjs';
 import { ObjectValue, Value } from '../value.mjs';
@@ -100,7 +100,7 @@ function PromiseProto_then([onFulfilled = Value.undefined, onRejected = Value.un
   return PerformPromiseThen(promise, onFulfilled, onRejected, resultCapability);
 }
 
-export function bootstrapPromisePrototype(realmRec) {
+export function bootstrapPromisePrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['catch', PromiseProto_catch, 1],
     ['finally', PromiseProto_finally, 1],

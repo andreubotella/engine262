@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Value } from '../value.mjs';
 import { StringValue, NumericValue } from '../static-semantics/all.mjs';
 import { OutOfRange } from '../helpers.mjs';

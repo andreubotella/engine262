@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { IsStringWellFormedUnicode, StringValue } from '../static-semantics/all.mjs';
 import { Token, isKeywordRaw } from './tokens.mjs';
 import { StatementParser } from './StatementParser.mjs';

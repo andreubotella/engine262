@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { OutOfRange } from '../helpers.mjs';
+import { OutOfRange, isArray } from '../helpers.mjs';
 
 export const Flag = {
   __proto__: null,
@@ -26,7 +25,7 @@ export const Flag = {
 });
 
 export function getDeclarations(node) {
-  if (Array.isArray(node)) {
+  if (isArray(node)) {
     return node.flatMap((n) => getDeclarations(n));
   }
   switch (node.type) {

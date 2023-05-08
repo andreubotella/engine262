@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { IsFunctionDefinition, HasName } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-isanonymousfunctiondefinition */

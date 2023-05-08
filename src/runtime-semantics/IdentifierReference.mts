@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ResolveBinding } from '../abstract-ops/all.mjs';
 import { StringValue } from '../static-semantics/all.mjs';
 import { Q } from '../completion.mjs';

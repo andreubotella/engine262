@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Value } from '../value.mjs';
 import { ToObject, GetValue } from '../abstract-ops/all.mjs';

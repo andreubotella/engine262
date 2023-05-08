@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Type, UndefinedValue, JSStringValue, SymbolValue,
   ObjectValue,
@@ -8,11 +7,14 @@ import {
   wellKnownSymbols,
   NullValue,
   BooleanValue,
+  type PropertyKeyValue,
 } from '../value.mjs';
 import {
   surroundingAgent,
 } from '../engine.mjs';
-import { Q, X } from '../completion.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X,
+} from '../completion.mjs';
 import { OutOfRange } from '../helpers.mjs';
 import { MV_StringNumericLiteral } from '../runtime-semantics/all.mjs';
 import {
@@ -29,7 +31,7 @@ import {
 } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-toprimitive */
-export function ToPrimitive(input, preferredType) {
+export function ToPrimitive(input: Value, preferredType?: 'string' | 'number'): NormalCompletion | ThrowCompletion {
   // 1. Assert: input is an ECMAScript language value.
   Assert(input instanceof Value);
   // 2. If Type(input) is Object, then
@@ -71,7 +73,7 @@ export function ToPrimitive(input, preferredType) {
 }
 
 /** https://tc39.es/ecma262/#sec-ordinarytoprimitive */
-export function OrdinaryToPrimitive(O, hint) {
+export function OrdinaryToPrimitive(O: ObjectValue, hint: 'string' | 'number'): NormalCompletion | ThrowCompletion {
   // 1. Assert: Type(O) is Object.
   Assert(O instanceof ObjectValue);
   // 2. Assert: hint is either string or number.
@@ -104,7 +106,7 @@ export function OrdinaryToPrimitive(O, hint) {
 }
 
 /** https://tc39.es/ecma262/#sec-toboolean */
-export function ToBoolean(argument) {
+export function ToBoolean(argument: Value): BooleanValue {
   if (argument instanceof UndefinedValue) {
     // Return false.
     return Value.false;
@@ -143,7 +145,7 @@ export function ToBoolean(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-tonumeric */
-export function ToNumeric(value) {
+export function ToNumeric(value: Value): NormalCompletion<NumberValue | BigIntValue> | ThrowCompletion {
   // 1. Let primValue be ? ToPrimitive(value, number).
   const primValue = Q(ToPrimitive(value, 'number'));
   // 2. If Type(primValue) is BigInt, return primValue.
@@ -155,7 +157,7 @@ export function ToNumeric(value) {
 }
 
 /** https://tc39.es/ecma262/#sec-tonumber */
-export function ToNumber(argument) {
+export function ToNumber(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
   if (argument instanceof UndefinedValue) {
     // Return NaN.
     return F(NaN);
@@ -189,13 +191,13 @@ export function ToNumber(argument) {
   throw new OutOfRange('ToNumber', { type: Type(argument), argument });
 }
 
-const mod = (n, m) => {
+const mod = (n: number, m: number) => {
   const r = n % m;
   return Math.floor(r >= 0 ? r : r + m);
 };
 
 /** https://tc39.es/ecma262/#sec-tointegerorinfinity */
-export function ToIntegerOrInfinity(argument) {
+export function ToIntegerOrInfinity(argument: Value): NormalCompletion<number> | ThrowCompletion {
   // 1. Let number be ? ToNumber(argument).
   const number = Q(ToNumber(argument));
   // 2. If number is NaN, +0𝔽, or -0𝔽, return 0.
@@ -218,7 +220,7 @@ export function ToIntegerOrInfinity(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-toint32 */
-export function ToInt32(argument) {
+export function ToInt32(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
   // 1. Let number be ? ToNumber(argument).
   const number = Q(ToNumber(argument)).numberValue();
   // 2. If number is NaN, +0𝔽, -0𝔽, +∞𝔽, or -∞𝔽, return +0𝔽.
@@ -237,7 +239,7 @@ export function ToInt32(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-touint32 */
-export function ToUint32(argument) {
+export function ToUint32(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
   // 1. Let number be ? ToNumber(argument).
   const number = Q(ToNumber(argument)).numberValue();
   // 2. If number is NaN, +0𝔽, -0𝔽, +∞𝔽, or -∞𝔽, return +0𝔽.
@@ -253,7 +255,7 @@ export function ToUint32(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-toint16 */
-export function ToInt16(argument) {
+export function ToInt16(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
   // 1. Let number be ? ToNumber(argument).
   const number = Q(ToNumber(argument)).numberValue();
   // 2. If number is NaN, +0𝔽, -0𝔽, +∞𝔽, or -∞𝔽, return +0𝔽.
@@ -272,7 +274,7 @@ export function ToInt16(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-touint16 */
-export function ToUint16(argument) {
+export function ToUint16(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
   // 1. Let number be ? ToNumber(argument).
   const number = Q(ToNumber(argument)).numberValue();
   // 2. If number is NaN, +0𝔽, -0𝔽, +∞𝔽, or -∞𝔽, return +0𝔽.
@@ -288,7 +290,7 @@ export function ToUint16(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-toint8 */
-export function ToInt8(argument) {
+export function ToInt8(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
   // 1. Let number be ? ToNumber(argument).
   const number = Q(ToNumber(argument)).numberValue();
   // 2. If number is NaN, +0𝔽, -0𝔽, +∞𝔽, or -∞𝔽, return +0𝔽.
@@ -307,7 +309,7 @@ export function ToInt8(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-touint8 */
-export function ToUint8(argument) {
+export function ToUint8(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
   // 1. Let number be ? ToNumber(argument).
   const number = Q(ToNumber(argument)).numberValue();
   // 2. If number is NaN, +0𝔽, -0𝔽, +∞𝔽, or -∞𝔽, return +0𝔽.
@@ -323,7 +325,7 @@ export function ToUint8(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-touint8clamp */
-export function ToUint8Clamp(argument) {
+export function ToUint8Clamp(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
   // 1. Let number be ? ToNumber(argument).
   const number = Q(ToNumber(argument)).numberValue();
   // 2. If number is NaN, return +0𝔽.
@@ -357,7 +359,7 @@ export function ToUint8Clamp(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-tobigint */
-export function ToBigInt(argument) {
+export function ToBigInt(argument: Value): NormalCompletion<BigIntValue> | ThrowCompletion {
   // 1. Let prim be ? ToPrimitive(argument, number).
   const prim = Q(ToPrimitive(argument, 'number'));
   // 2. Return the value that prim corresponds to in Table 12 (#table-tobigint).
@@ -396,7 +398,7 @@ export function ToBigInt(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-stringtobigint */
-export function StringToBigInt(argument) {
+export function StringToBigInt(argument: JSStringValue): BigIntValue | UndefinedValue {
   // Apply the algorithm in 7.1.4.1 (#sec-tonumber-applied-to-the-string-type) with the following changes:
   // 1. Replace the StrUnsignedDecimalLiteral production with DecimalDigits to not allow Infinity, decimal points, or exponents.
   // 2. If the MV is NaN, return NaN, otherwise return the BigInt which exactly corresponds to the MV, rather than rounding to a Number.
@@ -409,7 +411,7 @@ export function StringToBigInt(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-tobigint64 */
-export function ToBigInt64(argument) {
+export function ToBigInt64(argument: Value): NormalCompletion<BigIntValue> | ThrowCompletion {
   // 1. Let n be ? ToBigInt(argument).
   const n = Q(ToBigInt(argument));
   // 2. Let int64bit be ℝ(n) modulo 2^64.
@@ -422,7 +424,7 @@ export function ToBigInt64(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-tobiguint64 */
-export function ToBigUint64(argument) {
+export function ToBigUint64(argument: Value): NormalCompletion<BigIntValue> | ThrowCompletion {
   // 1. Let n be ? ToBigInt(argument).
   const n = Q(ToBigInt(argument));
   // 2. Let int64bit be ℝ(n) modulo 2^64.
@@ -432,7 +434,7 @@ export function ToBigUint64(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-tostring */
-export function ToString(argument) {
+export function ToString(argument: Value): NormalCompletion<JSStringValue> | ThrowCompletion {
   if (argument instanceof UndefinedValue) {
     // Return "undefined".
     return new JSStringValue('undefined');
@@ -465,7 +467,7 @@ export function ToString(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-toobject */
-export function ToObject(argument) {
+export function ToObject(argument: Value): NormalCompletion<ObjectValue> | ThrowCompletion {
   if (argument instanceof UndefinedValue) {
     // Throw a TypeError exception.
     return surroundingAgent.Throw('TypeError', 'CannotConvertToObject', 'undefined');
@@ -503,7 +505,7 @@ export function ToObject(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-topropertykey */
-export function ToPropertyKey(argument) {
+export function ToPropertyKey(argument: Value): NormalCompletion<PropertyKeyValue> | ThrowCompletion {
   // 1. Let key be ? ToPrimitive(argument, string).
   const key = Q(ToPrimitive(argument, 'string'));
   // 2. If Type(key) is Symbol, then
@@ -516,7 +518,7 @@ export function ToPropertyKey(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-tolength */
-export function ToLength(argument) {
+export function ToLength(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
   // 1. Let len be ? ToIntegerOrInfinity(argument).
   const len = Q(ToIntegerOrInfinity(argument));
   // 2. If len ≤ 0, return +0𝔽.
@@ -528,7 +530,7 @@ export function ToLength(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-canonicalnumericindexstring */
-export function CanonicalNumericIndexString(argument) {
+export function CanonicalNumericIndexString(argument: JSStringValue): NumberValue | UndefinedValue {
   // 1. Assert: Type(argument) is String.
   Assert(argument instanceof JSStringValue);
   // 2. If argument is "-0", return -0𝔽.
@@ -546,7 +548,7 @@ export function CanonicalNumericIndexString(argument) {
 }
 
 /** https://tc39.es/ecma262/#sec-toindex */
-export function ToIndex(value) {
+export function ToIndex(value: Value): NormalCompletion<number> | ThrowCompletion {
   // 1. If value is undefined, then
   if (value instanceof UndefinedValue) {
     // a. Return 0.

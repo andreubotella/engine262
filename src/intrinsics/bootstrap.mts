@@ -1,25 +1,45 @@
-// @ts-nocheck
 import {
   Assert,
   CreateBuiltinFunction,
   OrdinaryObjectCreate,
+  Realm,
+  type NativeFunction,
+  type FunctionObject,
+  type BuiltinFunctionObject,
 } from '../abstract-ops/all.mjs';
 import {
   Descriptor,
+  ObjectValue,
   Value,
   wellKnownSymbols,
+  type DescriptorInit,
+  type PropertyKeyValue,
+  UndefinedValue,
+  NullValue,
+  type OrdinaryObject,
 } from '../value.mjs';
 import { X } from '../completion.mjs';
+import { isArray } from '../helpers.mjs';
+
+export type AssignedProp = [
+  name: string | PropertyKeyValue,
+  impl: NativeFunction | FunctionObject | [
+    getter: NativeFunction | FunctionObject | UndefinedValue,
+    setter: NativeFunction | FunctionObject | UndefinedValue
+  ],
+  length: number,
+  descriptor?: Partial<DescriptorInit>
+];
 
 /** https://tc39.es/ecma262/#sec-ecmascript-standard-built-in-objects */
-export function assignProps(realmRec, obj, props) {
+export function assignProps(realmRec: Realm, obj: ObjectValue, props: readonly AssignedProp[]): void {
   for (const item of props) {
     if (item === undefined) {
       continue;
     }
     const [n, v, len, descriptor] = item;
     const name = n instanceof Value ? n : Value(n);
-    if (Array.isArray(v)) {
+    if (isArray(v)) {
       // Every accessor property described in clauses 18 through 26 and in
       // Annex B.2 has the attributes { [[Enumerable]]: false,
       // [[Configurable]]: true } unless otherwise specified. If only a get
@@ -32,7 +52,7 @@ export function assignProps(realmRec, obj, props) {
       ] = v;
       if (typeof getter === 'function') {
         getter = CreateBuiltinFunction(
-          getter,
+          getter as NativeFunction,
           0,
           name,
           [],
@@ -43,7 +63,7 @@ export function assignProps(realmRec, obj, props) {
       }
       if (typeof setter === 'function') {
         setter = CreateBuiltinFunction(
-          setter,
+          setter as NativeFunction,
           1,
           name,
           [],
@@ -63,7 +83,7 @@ export function assignProps(realmRec, obj, props) {
       // Every other data property described in clauses 18 through 26 and in
       // Annex B.2 has the attributes { [[Writable]]: true, [[Enumerable]]:
       // false, [[Configurable]]: true } unless otherwise specified.
-      let value;
+      let value: FunctionObject;
       if (typeof v === 'function') {
         Assert(typeof len === 'number');
         value = CreateBuiltinFunction(v, len, name, [], realmRec);
@@ -81,7 +101,7 @@ export function assignProps(realmRec, obj, props) {
   }
 }
 
-export function bootstrapPrototype(realmRec, props, Prototype, stringTag) {
+export function bootstrapPrototype(realmRec: Realm, props: readonly AssignedProp[], Prototype: ObjectValue | NullValue, stringTag: string): OrdinaryObject {
   Assert(Prototype !== undefined);
   const proto = OrdinaryObjectCreate(Prototype);
 
@@ -99,7 +119,7 @@ export function bootstrapPrototype(realmRec, props, Prototype, stringTag) {
   return proto;
 }
 
-export function bootstrapConstructor(realmRec, Constructor, name, length, Prototype, props = []) {
+export function bootstrapConstructor(realmRec: Realm, Constructor: NativeFunction, name: string, length: number, Prototype: ObjectValue, props: readonly AssignedProp[] = []): BuiltinFunctionObject {
   const cons = CreateBuiltinFunction(
     Constructor,
     length,

@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Call,
   F,
   IsCallable,
+  Realm,
   RequireInternalSlot,
   SameValueZero,
 } from '../abstract-ops/all.mjs';
@@ -162,7 +162,7 @@ function SetProto_values(args, { thisValue }) {
   return Q(CreateSetIterator(S, 'value'));
 }
 
-export function bootstrapSetPrototype(realmRec) {
+export function bootstrapSetPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['add', SetProto_add, 1],
     ['clear', SetProto_clear, 0],

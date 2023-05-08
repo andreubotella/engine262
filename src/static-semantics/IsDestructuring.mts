@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function IsDestructuring(node) {
   switch (node.type) {
     case 'ObjectBindingPattern':

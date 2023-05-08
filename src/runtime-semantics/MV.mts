@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { F } from '../abstract-ops/all.mjs';
 
 /** https://tc39.es/ecma262/#sec-runtime-semantics-mv-s */

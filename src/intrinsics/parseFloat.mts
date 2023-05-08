@@ -1,8 +1,8 @@
-// @ts-nocheck
 import {
   CreateBuiltinFunction,
   ToString,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { Value } from '../value.mjs';
@@ -73,6 +73,6 @@ function ParseFloat([string = Value.undefined]) {
   return F(parseFloat(numberString.slice(0, index)) * multiplier);
 }
 
-export function bootstrapParseFloat(realmRec) {
+export function bootstrapParseFloat(realmRec: Realm) {
   realmRec.Intrinsics['%parseFloat%'] = CreateBuiltinFunction(ParseFloat, 1, Value('parseFloat'), [], realmRec);
 }

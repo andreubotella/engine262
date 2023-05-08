@@ -1,4 +1,3 @@
-// @ts-nocheck
 import isUnicodeIDStartRegex from '@unicode/unicode-15.0.0/Binary_Property/ID_Start/regex.js';
 import isUnicodeIDContinueRegex from '@unicode/unicode-15.0.0/Binary_Property/ID_Continue/regex.js';
 import isSpaceSeparatorRegex from '@unicode/unicode-15.0.0/General_Category/Space_Separator/regex.js';

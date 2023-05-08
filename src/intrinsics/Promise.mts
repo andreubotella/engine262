@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   surroundingAgent,
 } from '../engine.mjs';
@@ -29,6 +28,7 @@ import {
   OrdinaryCreateFromConstructor,
   PromiseCapabilityRecord,
   PromiseResolve,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   AbruptCompletion, Completion,
@@ -659,7 +659,7 @@ function Promise_symbolSpecies(args, { thisValue }) {
   return thisValue;
 }
 
-export function bootstrapPromise(realmRec) {
+export function bootstrapPromise(realmRec: Realm) {
   const promiseConstructor = bootstrapConstructor(realmRec, PromiseConstructor, 'Promise', 1, realmRec.Intrinsics['%Promise.prototype%'], [
     ['all', Promise_all, 1],
     ['allSettled', Promise_allSettled, 1],

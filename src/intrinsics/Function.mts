@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Q } from '../completion.mjs';
 import { CreateDynamicFunction } from '../runtime-semantics/all.mjs';
+import type { Realm } from '../api.mjs';
 import { bootstrapConstructor } from './bootstrap.mjs';
 
 /** https://tc39.es/ecma262/#sec-function-p1-p2-pn-body */
@@ -13,7 +13,7 @@ function FunctionConstructor(args, { NewTarget }) {
   return Q(CreateDynamicFunction(C, NewTarget, 'normal', args));
 }
 
-export function bootstrapFunction(realmRec) {
+export function bootstrapFunction(realmRec: Realm) {
   const cons = bootstrapConstructor(realmRec, FunctionConstructor, 'Function', 1, realmRec.Intrinsics['%Function.prototype%'], []);
   realmRec.Intrinsics['%Function%'] = cons;
 }

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Assert,
   Get,
@@ -9,6 +8,7 @@ import {
   ObjectValue, UndefinedValue, JSStringValue, Value,
 } from '../value.mjs';
 import { Q } from '../completion.mjs';
+import { isArray } from '../helpers.mjs';
 
 /** https://tc39.es/ecma262/#sec-getsubstitution */
 export function GetSubstitution(matched, str, position, captures, namedCaptures, replacement) {
@@ -25,7 +25,7 @@ export function GetSubstitution(matched, str, position, captures, namedCaptures,
   // 6. Assert: position ≤ stringLength.
   Assert(position <= stringLength);
   // 7. Assert: captures is a possibly empty List of Strings.
-  Assert(Array.isArray(captures) && captures.every((value) => value instanceof JSStringValue || value instanceof UndefinedValue));
+  Assert(isArray(captures) && captures.every((value) => value instanceof JSStringValue || value instanceof UndefinedValue));
   // 8. Assert: Type(replacement) is String.
   Assert(replacement instanceof JSStringValue);
   // 9. Let tailPos be position + matchLength.

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Value, Descriptor } from '../value.mjs';
 import {
@@ -9,6 +8,7 @@ import {
   DefinePropertyOrThrow,
   InstallErrorCause,
   CreateArrayFromList,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { captureStack } from '../helpers.mjs';
@@ -54,7 +54,7 @@ function AggregateErrorConstructor([errors = Value.undefined, message = Value.un
   return O;
 }
 
-export function bootstrapAggregateError(realmRec) {
+export function bootstrapAggregateError(realmRec: Realm) {
   const c = bootstrapConstructor(realmRec, AggregateErrorConstructor, 'AggregateError', 2, realmRec.Intrinsics['%AggregateError.prototype%'], []);
   c.Prototype = realmRec.Intrinsics['%Error%'];
   realmRec.Intrinsics['%AggregateError%'] = c;

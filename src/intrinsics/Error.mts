@@ -1,9 +1,9 @@
-// @ts-nocheck
 import {
   DefinePropertyOrThrow,
   OrdinaryCreateFromConstructor,
   InstallErrorCause,
   ToString,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   Descriptor,
@@ -49,7 +49,7 @@ function ErrorConstructor([message = Value.undefined, options = Value.undefined]
   return O;
 }
 
-export function bootstrapError(realmRec) {
+export function bootstrapError(realmRec: Realm) {
   const error = bootstrapConstructor(realmRec, ErrorConstructor, 'Error', 1, realmRec.Intrinsics['%Error.prototype%'], []);
 
   realmRec.Intrinsics['%Error%'] = error;

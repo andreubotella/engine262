@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Assert } from '../abstract-ops/all.mjs';
 import { X } from '../completion.mjs';
 import { isLeadingSurrogate, isTrailingSurrogate } from '../parser/Lexer.mjs';

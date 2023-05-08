@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   ObjectValue,
   BooleanValue,
@@ -7,7 +6,7 @@ import {
 import {
   surroundingAgent,
 } from '../engine.mjs';
-import { Assert } from '../abstract-ops/all.mjs';
+import { Assert, Realm } from '../abstract-ops/all.mjs';
 import { Q } from '../completion.mjs';
 import { bootstrapPrototype } from './bootstrap.mjs';
 
@@ -43,7 +42,7 @@ function BooleanProto_valueOf(argList, { thisValue }) {
   return Q(thisBooleanValue(thisValue));
 }
 
-export function bootstrapBooleanPrototype(realmRec) {
+export function bootstrapBooleanPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['toString', BooleanProto_toString, 0],
     ['valueOf', BooleanProto_valueOf, 0],

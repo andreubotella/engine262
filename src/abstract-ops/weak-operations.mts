@@ -1,11 +1,12 @@
-// @ts-nocheck
 import { surroundingAgent, HostCallJobCallback } from '../engine.mjs';
-import { Value } from '../value.mjs';
-import { NormalCompletion, Q, X } from '../completion.mjs';
+import { ObjectValue, SymbolValue, Value } from '../value.mjs';
+import {
+  NormalCompletion, Q, X, unused,
+} from '../completion.mjs';
 import { Assert } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-clear-kept-objects */
-export function ClearKeptObjects() {
+export function ClearKeptObjects(): unused {
   // 1. Let agentRecord be the surrounding agent's Agent Record.
   const agentRecord = surroundingAgent.AgentRecord;
   // 2. Set agentRecord.[[KeptAlive]] to a new empty List.
@@ -13,7 +14,7 @@ export function ClearKeptObjects() {
 }
 
 /** https://tc39.es/ecma262/#sec-addtokeptobjects */
-export function AddToKeptObjects(object) {
+export function AddToKeptObjects(object: ObjectValue | SymbolValue): unused {
   // 1. Let agentRecord be the surrounding agent's Agent Record.
   const agentRecord = surroundingAgent.AgentRecord;
   // 2. Append object to agentRecord.[[KeptAlive]].

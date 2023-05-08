@@ -1,11 +1,10 @@
-// @ts-nocheck
-import { OutOfRange } from '../helpers.mjs';
-import { Value } from '../value.mjs';
+import { OutOfRange, isArray } from '../helpers.mjs';
+import { JSStringValue, Value } from '../value.mjs';
 import { StringValue } from './all.mjs';
 
-export function BoundNames(node) {
-  if (Array.isArray(node)) {
-    const names = [];
+export function BoundNames(node): JSStringValue[] {
+  if (isArray(node)) {
+    const names: JSStringValue[] = [];
     for (const item of node) {
       names.push(...BoundNames(item));
     }

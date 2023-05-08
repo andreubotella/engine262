@@ -1,4 +1,5 @@
-// @ts-nocheck
+import { isArray } from '../helpers.mjs';
+
 /** https://tc39.es/ecma262/#sec-static-semantics-containsarguments */
 export function ContainsArguments(node) {
   switch (node.type) {
@@ -19,7 +20,7 @@ export function ContainsArguments(node) {
       return null;
     default:
       for (const value of Object.values(node)) {
-        if ((value?.type || Array.isArray(value))) {
+        if ((value?.type || isArray(value))) {
           const maybe = ContainsArguments(value);
           if (maybe) {
             return maybe;

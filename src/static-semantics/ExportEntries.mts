@@ -1,10 +1,9 @@
-// @ts-nocheck
 import { Value } from '../value.mjs';
-import { OutOfRange } from '../helpers.mjs';
+import { OutOfRange, isArray } from '../helpers.mjs';
 import { BoundNames, ModuleRequests, ExportEntriesForModule } from './all.mjs';
 
 export function ExportEntries(node) {
-  if (Array.isArray(node)) {
+  if (isArray(node)) {
     const entries = [];
     node.forEach((n) => {
       entries.push(...ExportEntries(n));

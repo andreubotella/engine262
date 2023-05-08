@@ -1,10 +1,11 @@
-// @ts-nocheck
 import {
   Descriptor,
   Type, JSStringValue, BooleanValue,
   Value,
   ObjectValue,
   wellKnownSymbols,
+  type PropertyKeyValue,
+  type LanguageType,
 } from '../value.mjs';
 import {
   surroundingAgent,
@@ -13,8 +14,9 @@ import { InstanceofOperator } from '../runtime-semantics/all.mjs';
 import {
   NormalCompletion,
   EnsureCompletion,
-  Q, X,
+  Q, X, unused, ThrowCompletion, type NormalCompletionObject,
 } from '../completion.mjs';
+import { isArray } from '../helpers.mjs';
 import {
   ArrayCreate,
   Assert,
@@ -30,6 +32,8 @@ import {
   ToString,
   isProxyExoticObject,
   F as toNumberValue,
+  type FunctionObject,
+  Realm,
 } from './all.mjs';
 
 
@@ -37,9 +41,9 @@ import {
 /** https://tc39.es/ecma262/#sec-operations-on-objects */
 
 /** https://tc39.es/ecma262/#sec-makebasicobject */
-export function MakeBasicObject(internalSlotsList) {
+export function MakeBasicObject<const T extends readonly string[]>(internalSlotsList: T): ObjectValue & { [key in T[number]]: unknown } {
   // 1.  Assert: internalSlotsList is a List of internal slot names.
-  Assert(Array.isArray(internalSlotsList));
+  Assert(isArray(internalSlotsList));
   // 2.  Let obj be a newly created object with an internal slot for each name in internalSlotsList.
   // 3.  Set obj's essential internal methods to the default ordinary object definitions specified in 9.1.
   const obj = new ObjectValue(internalSlotsList);
@@ -57,7 +61,7 @@ export function MakeBasicObject(internalSlotsList) {
 }
 
 /** https://tc39.es/ecma262/#sec-get-o-p */
-export function Get(O, P) {
+export function Get(O: ObjectValue, P: PropertyKeyValue): NormalCompletion | ThrowCompletion {
   Assert(O instanceof ObjectValue);
   Assert(IsPropertyKey(P));
   // TODO: This should just return Q(O.Get(P, O))
@@ -72,7 +76,7 @@ export function GetV(V, P) {
 }
 
 /** https://tc39.es/ecma262/#sec-set-o-p-v-throw */
-export function Set(O, P, V, Throw) {
+export function Set(O: ObjectValue, P: PropertyKeyValue, V: Value, Throw: BooleanValue): NormalCompletionObject<void> | ThrowCompletion {
   Assert(O instanceof ObjectValue);
   Assert(IsPropertyKey(P));
   Assert(Throw instanceof BooleanValue);
@@ -80,11 +84,11 @@ export function Set(O, P, V, Throw) {
   if (success === Value.false && Throw === Value.true) {
     return surroundingAgent.Throw('TypeError', 'CannotSetProperty', P, O);
   }
-  return success;
+  return unused;
 }
 
 /** https://tc39.es/ecma262/#sec-createdataproperty */
-export function CreateDataProperty(O, P, V) {
+export function CreateDataProperty(O: ObjectValue, P: PropertyKeyValue, V: Value): NormalCompletion<BooleanValue> | ThrowCompletion {
   Assert(O instanceof ObjectValue);
   Assert(IsPropertyKey(P));
 
@@ -165,7 +169,7 @@ export function HasProperty(O, P) {
 }
 
 /** https://tc39.es/ecma262/#sec-hasownproperty */
-export function HasOwnProperty(O, P) {
+export function HasOwnProperty(O: ObjectValue, P: PropertyKeyValue) {
   Assert(O instanceof ObjectValue);
   Assert(IsPropertyKey(P));
   const desc = Q(O.GetOwnProperty(P));
@@ -176,10 +180,7 @@ export function HasOwnProperty(O, P) {
 }
 
 /** https://tc39.es/ecma262/#sec-call */
-export function Call(F, V, argumentsList) {
-  if (!argumentsList) {
-    argumentsList = [];
-  }
+export function Call(F: Value, V: Value, argumentsList: readonly Value[] = []): NormalCompletion | ThrowCompletion {
   Assert(argumentsList.every((a) => a instanceof Value));
 
   if (IsCallable(F) === Value.false) {
@@ -190,7 +191,7 @@ export function Call(F, V, argumentsList) {
 }
 
 /** https://tc39.es/ecma262/#sec-construct */
-export function Construct(F, argumentsList, newTarget) {
+export function Construct(F, argumentsList, newTarget?) {
   if (!newTarget) {
     newTarget = F;
   }
@@ -285,7 +286,7 @@ export function LengthOfArrayLike(obj) {
 }
 
 /** https://tc39.es/ecma262/#sec-createlistfromarraylike */
-export function CreateListFromArrayLike(obj, elementTypes) {
+export function CreateListFromArrayLike(obj: Value, elementTypes?: readonly LanguageType[]): NormalCompletion<Value[]> | ThrowCompletion {
   // 1. If elementTypes is not present, set elementTypes to « Undefined, Null, Boolean, String, Symbol, Number, BigInt, Object ».
   if (!elementTypes) {
     elementTypes = ['Undefined', 'Null', 'Boolean', 'String', 'Symbol', 'Number', 'BigInt', 'Object'];
@@ -330,7 +331,7 @@ export function Invoke(V, P, argumentsList) {
 }
 
 /** https://tc39.es/ecma262/#sec-ordinaryhasinstance */
-export function OrdinaryHasInstance(C, O) {
+export function OrdinaryHasInstance(C: Value, O: Value): NormalCompletion<BooleanValue> | ThrowCompletion {
   if (IsCallable(C) === Value.false) {
     return Value.false;
   }
@@ -404,7 +405,7 @@ export function EnumerableOwnPropertyNames(O, kind) {
 }
 
 /** https://tc39.es/ecma262/#sec-getfunctionrealm */
-export function GetFunctionRealm(obj) {
+export function GetFunctionRealm(obj: FunctionObject): Realm {
   Assert(X(IsCallable(obj)) === Value.true);
   if ('Realm' in obj) {
     return obj.Realm;

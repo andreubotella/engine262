@@ -1,4 +1,3 @@
-// @ts-nocheck
 const MaybeAssignTokens = [
   // Logical
   ['NULLISH', '??', 3],

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Type,
   NullValue,
@@ -30,6 +29,7 @@ import {
   ToPropertyDescriptor,
   ToPropertyKey,
   CreateBuiltinFunction,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { AddEntriesFromIterable } from './Map.mjs';
@@ -406,7 +406,7 @@ function Object_values([O = Value.undefined]) {
   return CreateArrayFromList(nameList);
 }
 
-export function bootstrapObject(realmRec) {
+export function bootstrapObject(realmRec: Realm) {
   const objectConstructor = bootstrapConstructor(realmRec, ObjectConstructor, 'Object', 1, realmRec.Intrinsics['%Object.prototype%'], [
     ['assign', Object_assign, 2],
     ['create', Object_create, 2],

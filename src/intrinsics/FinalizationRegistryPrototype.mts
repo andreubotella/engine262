@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Value, ObjectValue } from '../value.mjs';
 import {
   CleanupFinalizationRegistry,
   IsCallable,
+  Realm,
   RequireInternalSlot,
   SameValue,
 } from '../abstract-ops/all.mjs';
@@ -89,7 +89,7 @@ function FinalizationRegistryProto_unregister([unregisterToken = Value.undefined
   return removed;
 }
 
-export function bootstrapFinalizationRegistryPrototype(realmRec) {
+export function bootstrapFinalizationRegistryPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     surroundingAgent.feature('cleanup-some')
       ? ['cleanupSome', FinalizationRegistryProto_cleanupSome, 0]

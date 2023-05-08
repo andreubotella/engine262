@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Value } from '../value.mjs';
 import {
@@ -9,6 +8,7 @@ import {
   GetIterator,
   IteratorStep,
   IteratorValue,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { IfAbruptCloseIterator, Q } from '../completion.mjs';
 import { bootstrapConstructor } from './bootstrap.mjs';
@@ -52,7 +52,7 @@ function WeakSetConstructor([iterable = Value.undefined], { NewTarget }) {
   }
 }
 
-export function bootstrapWeakSet(realmRec) {
+export function bootstrapWeakSet(realmRec: Realm) {
   const c = bootstrapConstructor(realmRec, WeakSetConstructor, 'WeakSet', 0, realmRec.Intrinsics['%WeakSet.prototype%'], []);
   realmRec.Intrinsics['%WeakSet%'] = c;
 }

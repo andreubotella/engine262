@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Value } from './value.mjs';
 import {
   surroundingAgent,
@@ -25,6 +24,7 @@ import {
   ParseJSONModule,
 } from './parse.mjs';
 import { SourceTextModuleRecord } from './modules.mjs';
+import { isArray } from './helpers.mjs';
 
 export * from './value.mjs';
 export * from './engine.mjs';
@@ -178,7 +178,7 @@ export function runJobQueue() {
 
 export function evaluateScript(sourceText, realm, hostDefined) {
   const s = ParseScript(sourceText, realm, hostDefined);
-  if (Array.isArray(s)) {
+  if (isArray(s)) {
     return ThrowCompletion(s[0]);
   }
 
@@ -255,7 +255,7 @@ export class ManagedRealm extends Realm {
       specifier,
       SourceTextModuleRecord: ManagedSourceTextModuleRecord,
     }));
-    if (Array.isArray(module)) {
+    if (isArray(module)) {
       return ThrowCompletion(module[0]);
     }
     return module;

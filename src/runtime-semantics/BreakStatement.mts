@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Completion } from '../completion.mjs';
 import { StringValue } from '../static-semantics/all.mjs';
 

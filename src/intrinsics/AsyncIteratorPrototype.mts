@@ -1,4 +1,4 @@
-// @ts-nocheck
+import type { Realm } from '../api.mjs';
 import { wellKnownSymbols } from '../value.mjs';
 import { bootstrapPrototype } from './bootstrap.mjs';
 
@@ -8,7 +8,7 @@ function AsyncIteratorPrototype_asyncIterator(args, { thisValue }) {
   return thisValue;
 }
 
-export function bootstrapAsyncIteratorPrototype(realmRec) {
+export function bootstrapAsyncIteratorPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     [wellKnownSymbols.asyncIterator, AsyncIteratorPrototype_asyncIterator, 0],
   ], realmRec.Intrinsics['%Object.prototype%']);

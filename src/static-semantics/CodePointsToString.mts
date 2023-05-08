@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { UTF16EncodeCodePoint } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-codepointstostring */

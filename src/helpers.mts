@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ExecutionContext, type GCMarker, surroundingAgent } from './engine.mjs';
 import {
   Value, Descriptor, JSStringValue, NumberValue, ObjectValue, UndefinedValue, NullValue,
@@ -81,9 +80,8 @@ export class ValueMap<K, V> {
 }
 
 export class ValueSet<T> {
-  private set: Set<T>;
-  constructor(init: undefined | null | Iterable<T>) {
-    this.set = new Set();
+  private set = new Set<T>();
+  constructor(init?: undefined | null | Iterable<T>) {
     if (init !== undefined && init !== null) {
       for (const item of init) {
         this.add(item);
@@ -112,7 +110,7 @@ export class ValueSet<T> {
     return this[Symbol.iterator]();
   }
 
-  * [Symbol.iterator]() {
+  * [Symbol.iterator](): T extends string | number ? Generator<JSStringValue | NumberValue> : Generator<T> {
     for (const key of this.set.values()) {
       if (typeof key === 'string' || typeof key === 'number') {
         yield Value(key);
@@ -394,3 +392,10 @@ export type Mutable<T> = {
 }
 
 export const isArray: (arg: unknown) => arg is readonly unknown[] = Array.isArray;
+
+/**
+ * @internal
+ * Cast a type to another type. This is unsafe, make sure you have called real Assert before!
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+export function CastType<T>(val: unknown): asserts val is T {}

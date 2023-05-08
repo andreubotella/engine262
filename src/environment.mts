@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { AbstractModuleRecord } from './modules.mjs';
 import {
   Descriptor,
@@ -7,8 +6,12 @@ import {
   ObjectValue,
   Value,
   wellKnownSymbols,
+  JSStringValue,
+  BooleanValue,
+  NullValue,
+  PrivateName,
 } from './value.mjs';
-import { surroundingAgent } from './engine.mjs';
+import { surroundingAgent, type GCMarker } from './engine.mjs';
 import {
   Assert,
   DefinePropertyOrThrow,
@@ -22,25 +25,36 @@ import {
   ToBoolean,
   isECMAScriptFunctionObject,
 } from './abstract-ops/all.mjs';
-import { NormalCompletion, Q, X } from './completion.mjs';
+import { NormalCompletion, Q, ThrowCompletion, X } from './completion.mjs';
 import { ValueMap } from './helpers.mjs';
 
 /** https://tc39.es/ecma262/#sec-environment-records */
-export class EnvironmentRecord {
-  OuterEnv;
+export abstract class EnvironmentRecord {
+  abstract HasBinding(N: JSStringValue): BooleanValue;
+  abstract CreateMutableBinding(N: JSStringValue, D: BooleanValue): void;
+  abstract CreateImmutableBinding(N: JSStringValue, S: BooleanValue): void;
+  abstract InitializeBinding(N: JSStringValue, V: Value): void;
+  abstract SetMutableBinding(N: JSStringValue, V: Value, S: BooleanValue): NormalCompletion<UndefinedValue> | ThrowCompletion;
+  abstract GetBindingValue(N: JSStringValue, S: BooleanValue): NormalCompletion | ThrowCompletion;
+  abstract DeleteBinding(N: JSStringValue): BooleanValue;
+  abstract HasThisBinding(): BooleanValue;
+  abstract HasSuperBinding(): BooleanValue;
+  abstract WithBaseObject(): Value | undefined;
+
+  OuterEnv: EnvironmentRecord | NullValue = Value.null;
 
   // NON-SPEC
-  mark(m) {
+  mark(m: GCMarker) {
     m(this.OuterEnv);
   }
 }
 
 /** https://tc39.es/ecma262/#sec-declarative-environment-records */
 export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
-  bindings = new ValueMap();
+  protected readonly bindings = new ValueMap<JSStringValue, unknown>();
 
   /** https://tc39.es/ecma262/#sec-declarative-environment-records-hasbinding-n */
-  HasBinding(N) {
+  HasBinding(N: JSStringValue) {
     // 1. Let envRec be the declarative Environment Record for which the method was invoked.
     const envRec = this;
     // 2. If envRec has a binding for the name that is the value of N, return true.
@@ -52,7 +66,7 @@ export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-declarative-environment-records-createmutablebinding-n-d */
-  CreateMutableBinding(N, D) {
+  CreateMutableBinding(N: JSStringValue, D: BooleanValue) {
     // 1. Let envRec be the declarative Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Assert: envRec does not already have a binding for N.
@@ -67,7 +81,7 @@ export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
       strict: undefined,
       deletable: D === Value.true,
       value: undefined,
-      mark(m) {
+      mark(m: GCMarker) {
         m(this.value);
       },
     });
@@ -76,7 +90,7 @@ export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-declarative-environment-records-createimmutablebinding-n-s */
-  CreateImmutableBinding(N, S) {
+  CreateImmutableBinding(N: JSStringValue, S: BooleanValue) {
     // 1. Let envRec be the declarative Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Assert: envRec does not already have a binding for N.
@@ -90,7 +104,7 @@ export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
       strict: S === Value.true,
       deletable: false,
       value: undefined,
-      mark(m) {
+      mark(m: GCMarker) {
         m(this.value);
       },
     });
@@ -99,7 +113,7 @@ export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-declarative-environment-records-initializebinding-n-v */
-  InitializeBinding(N, V) {
+  InitializeBinding(N: JSStringValue, V: Value) {
     // 1. Let envRec be the declarative Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Assert: envRec must have an uninitialized binding for N.
@@ -114,7 +128,7 @@ export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-declarative-environment-records-setmutablebinding-n-v-s */
-  SetMutableBinding(N, V, S) {
+  SetMutableBinding(N: JSStringValue, V: Value, S: BooleanValue) {
     Assert(IsPropertyKey(N));
     // 1. Let envRec be the declarative Environment Record for which the method was invoked.
     const envRec = this;
@@ -155,7 +169,7 @@ export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-declarative-environment-records-getbindingvalue-n-s */
-  GetBindingValue(N) {
+  GetBindingValue(N: JSStringValue, _S: BooleanValue) {
     // 1. Let envRec be the declarative Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Assert: envRec has a binding for N.
@@ -170,7 +184,7 @@ export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-declarative-environment-records-deletebinding-n */
-  DeleteBinding(N) {
+  DeleteBinding(N: JSStringValue) {
     // 1. Let envRec be the declarative Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Assert: envRec has a binding for the name that is the value of N.
@@ -205,18 +219,31 @@ export class DeclarativeEnvironmentRecord extends EnvironmentRecord {
   }
 
   // NON-SPEC
-  mark(m) {
+  override mark(m: GCMarker) {
     m(this.bindings);
   }
 }
 
 /** https://tc39.es/ecma262/#sec-object-environment-records */
 export class ObjectEnvironmentRecord extends EnvironmentRecord {
-  BindingObject;
-  IsWithEnvironment;
+  private readonly BindingObject: ObjectValue;
+  private readonly IsWithEnvironment: BooleanValue;
+
+  /** https://tc39.es/ecma262/#sec-newobjectenvironment */
+  constructor(O: ObjectValue, W: BooleanValue, E: EnvironmentRecord | NullValue) {
+    // 1. Let env be a new object Environment Record.
+    super();
+    // 2. Set env.[[BindingObject]] to O.
+    this.BindingObject = O;
+    // 3. Set env.[[IsWithEnvironment]] to W.
+    this.IsWithEnvironment = W;
+    // 4. Set env.[[OuterEnv]] to E.
+    this.OuterEnv = E;
+    // 5. Return env.
+  }
 
   /** https://tc39.es/ecma262/#sec-object-environment-records-hasbinding-n */
-  HasBinding(N) {
+  HasBinding(N: JSStringValue) {
     // 1. Let envRec be the object Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let bindings be the binding object for envRec.
@@ -247,7 +274,7 @@ export class ObjectEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-object-environment-records-createmutablebinding-n-d */
-  CreateMutableBinding(N, D) {
+  CreateMutableBinding(N: JSStringValue, D: BooleanValue) {
     // 1. Let envRec be the object Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let envRec be the object Environment Record for which the method was invoked.
@@ -262,12 +289,12 @@ export class ObjectEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-object-environment-records-createimmutablebinding-n-s */
-  CreateImmutableBinding(_N, _S) {
+  CreateImmutableBinding(_N: JSStringValue, _S: BooleanValue) {
     Assert(false, 'CreateImmutableBinding called on an Object Environment Record');
   }
 
   /** https://tc39.es/ecma262/#sec-object-environment-records-initializebinding-n-v */
-  InitializeBinding(N, V) {
+  InitializeBinding(N: JSStringValue, V: Value) {
     // 1. Let envRec be the object Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Assert: envRec must have an uninitialized binding for N.
@@ -277,7 +304,7 @@ export class ObjectEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-object-environment-records-setmutablebinding-n-v-s */
-  SetMutableBinding(N, V, S) {
+  SetMutableBinding(N: JSStringValue, V: Value, S: BooleanValue) {
     // 1. Let envRec be the object Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let bindings be the binding object for envRec.
@@ -293,7 +320,7 @@ export class ObjectEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-object-environment-records-getbindingvalue-n-s */
-  GetBindingValue(N, S) {
+  GetBindingValue(N: JSStringValue, S: BooleanValue) {
     // 1. Let envRec be the object Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let bindings be the binding object for envRec.
@@ -314,7 +341,7 @@ export class ObjectEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-object-environment-records-deletebinding-n */
-  DeleteBinding(N) {
+  DeleteBinding(N: JSStringValue) {
     // 1. Let envRec be the object Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let bindings be the binding object for envRec.
@@ -348,20 +375,43 @@ export class ObjectEnvironmentRecord extends EnvironmentRecord {
   }
 
   // NON-SPEC
-  mark(m) {
+  override mark(m: GCMarker) {
     m(this.BindingObject);
   }
 }
 
 /** https://tc39.es/ecma262/#sec-function-environment-records */
 export class FunctionEnvironmentRecord extends DeclarativeEnvironmentRecord {
-  ThisValue;
-  ThisBindingStatus;
+  ThisValue: Value;
+  ThisBindingStatus: 'lexical' | 'initialized' | 'uninitialized';
   FunctionObject;
-  NewTarget;
+  NewTarget: ObjectValue | UndefinedValue = UndefinedValue;
+
+  /** https://tc39.es/ecma262/#sec-newfunctionenvironment */
+  constructor(F, newTarget: ObjectValue | UndefinedValue) {
+    // 1. Assert: F is an ECMAScript function.
+    Assert(isECMAScriptFunctionObject(F));
+    // 2. Assert: Type(newTarget) is Undefined or Object.
+    Assert(newTarget instanceof UndefinedValue || newTarget instanceof ObjectValue);
+    // 3. Let env be a new function Environment Record containing no bindings.
+    super();
+    // 4. Set env.[[FunctionObject]] to F.
+    this.FunctionObject = F;
+    // 5. If F.[[ThisMode]] is lexical, set env.[[ThisBindingStatus]] to lexical.
+    if (F.ThisMode === 'lexical') {
+      this.ThisBindingStatus = 'lexical';
+    } else { // 6. Else, set env.[[ThisBindingStatus]] to uninitialized.
+      this.ThisBindingStatus = 'uninitialized';
+    }
+    // 7. Set env.[[NewTarget]] to newTarget.
+    this.NewTarget = newTarget;
+    // 8. Set env.[[OuterEnv]] to F.[[Environment]].
+    this.OuterEnv = F.Environment;
+    // 9. Return env.
+  }
 
   /** https://tc39.es/ecma262/#sec-bindthisvalue */
-  BindThisValue(V) {
+  BindThisValue(V: Value) {
     // 1. Let envRec be the function Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Assert: envRec.[[ThisBindingStatus]] is not lexical.
@@ -379,7 +429,7 @@ export class FunctionEnvironmentRecord extends DeclarativeEnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-function-environment-records-hasthisbinding */
-  HasThisBinding() {
+  override HasThisBinding() {
     // 1. Let envRec be the function Environment Record for which the method was invoked.
     const envRec = this;
     // 2. If envRec.[[ThisBindingStatus]] is lexical, return false; otherwise, return true.
@@ -391,7 +441,7 @@ export class FunctionEnvironmentRecord extends DeclarativeEnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-function-environment-records-hassuperbinding */
-  HasSuperBinding() {
+  override HasSuperBinding() {
     const envRec = this;
     // 1. If envRec.[[ThisBindingStatus]] is lexical, return false.
     if (envRec.ThisBindingStatus === 'lexical') {
@@ -434,7 +484,7 @@ export class FunctionEnvironmentRecord extends DeclarativeEnvironmentRecord {
     return Q(home.GetPrototypeOf());
   }
 
-  mark(m) {
+  override mark(m: GCMarker) {
     super.mark(m);
     m(this.ThisValue);
     m(this.FunctionObject);
@@ -444,13 +494,34 @@ export class FunctionEnvironmentRecord extends DeclarativeEnvironmentRecord {
 
 /** https://tc39.es/ecma262/#sec-global-environment-records */
 export class GlobalEnvironmentRecord extends EnvironmentRecord {
-  ObjectRecord;
-  GlobalThisValue;
-  DeclarativeRecord;
-  VarNames;
+  private readonly ObjectRecord: ObjectEnvironmentRecord;
+  readonly GlobalThisValue: ObjectValue;
+  private readonly DeclarativeRecord: DeclarativeEnvironmentRecord;
+  private readonly VarNames: JSStringValue[];
+
+  /** https://tc39.es/ecma262/#sec-newglobalenvironment */
+  constructor(G: ObjectValue, thisValue: ObjectValue) {
+    // 1. Let objRec be NewObjectEnvironment(G, false, null).
+    const objRec = NewObjectEnvironment(G, Value.false, Value.null);
+    // 2. Let dclRec be a new declarative Environment Record containing no bindings.
+    const dclRec = new DeclarativeEnvironmentRecord();
+    // 3. Let env be a new global Environment Record.
+    super();
+    // 4. Set env.[[ObjectRecord]] to objRec.
+    this.ObjectRecord = objRec;
+    // 5. Set env.[[GlobalThisValue]] to thisValue.
+    this.GlobalThisValue = thisValue;
+    // 6. Set env.[[DeclarativeRecord]] to dclRec.
+    this.DeclarativeRecord = dclRec;
+    // 7. Set env.[[VarNames]] to a new empty List.
+    this.VarNames = [];
+    // 8. Set env.[[OuterEnv]] to null.
+    this.OuterEnv = Value.null;
+    // 9. Return env.
+  }
 
   /** https://tc39.es/ecma262/#sec-global-environment-records-hasbinding-n */
-  HasBinding(N) {
+  HasBinding(N: JSStringValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let DclRec be envRec.[[DeclarativeRecord]].
@@ -466,7 +537,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-global-environment-records-createmutablebinding-n-d */
-  CreateMutableBinding(N, D) {
+  CreateMutableBinding(N: JSStringValue, D: BooleanValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let DclRec be envRec.[[DeclarativeRecord]].
@@ -480,7 +551,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-global-environment-records-createimmutablebinding-n-s */
-  CreateImmutableBinding(N, S) {
+  CreateImmutableBinding(N: JSStringValue, S: BooleanValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let DclRec be envRec.[[DeclarativeRecord]].
@@ -494,7 +565,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-global-environment-records-initializebinding-n-v */
-  InitializeBinding(N, V) {
+  InitializeBinding(N: JSStringValue, V: Value) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let DclRec be envRec.[[DeclarativeRecord]].
@@ -512,7 +583,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-global-environment-records-setmutablebinding-n-v-s */
-  SetMutableBinding(N, V, S) {
+  SetMutableBinding(N: JSStringValue, V: Value, S: BooleanValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let DclRec be envRec.[[DeclarativeRecord]].
@@ -529,7 +600,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-global-environment-records-getbindingvalue-n-s */
-  GetBindingValue(N, S) {
+  GetBindingValue(N: JSStringValue, S: BooleanValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let DclRec be envRec.[[DeclarativeRecord]].
@@ -546,7 +617,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-global-environment-records-deletebinding-n */
-  DeleteBinding(N) {
+  DeleteBinding(N: JSStringValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let DclRec be envRec.[[DeclarativeRecord]].
@@ -610,7 +681,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-hasvardeclaration */
-  HasVarDeclaration(N) {
+  HasVarDeclaration(N: JSStringValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let varDeclaredNames be envRec.[[VarNames]].
@@ -624,7 +695,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-haslexicaldeclaration */
-  HasLexicalDeclaration(N) {
+  HasLexicalDeclaration(N: JSStringValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let envRec be the global Environment Record for which the method was invoked.
@@ -634,7 +705,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-hasrestrictedglobalproperty */
-  HasRestrictedGlobalProperty(N) {
+  HasRestrictedGlobalProperty(N: JSStringValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let ObjRec be envRec.[[ObjectRecord]].
@@ -656,7 +727,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-candeclareglobalvar */
-  CanDeclareGlobalVar(N) {
+  CanDeclareGlobalVar(N: JSStringValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let ObjRec be envRec.[[ObjectRecord]].
@@ -674,7 +745,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-candeclareglobalfunction */
-  CanDeclareGlobalFunction(N) {
+  CanDeclareGlobalFunction(N: JSStringValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let ObjRec be envRec.[[ObjectRecord]].
@@ -703,7 +774,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-createglobalvarbinding */
-  CreateGlobalVarBinding(N, D) {
+  CreateGlobalVarBinding(N: JSStringValue, D: BooleanValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let ObjRec be envRec.[[ObjectRecord]].
@@ -733,7 +804,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-createglobalfunctionbinding */
-  CreateGlobalFunctionBinding(N, V, D) {
+  CreateGlobalFunctionBinding(N: JSStringValue, V: Value, D: BooleanValue) {
     // 1. Let envRec be the global Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Let ObjRec be envRec.[[ObjectRecord]].
@@ -774,7 +845,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
     return NormalCompletion(undefined);
   }
 
-  mark(m) {
+  override mark(m: GCMarker) {
     m(this.ObjectRecord);
     m(this.GlobalThisValue);
     m(this.DeclarativeRecord);
@@ -784,7 +855,7 @@ export class GlobalEnvironmentRecord extends EnvironmentRecord {
 /** https://tc39.es/ecma262/#sec-module-environment-records */
 export class ModuleEnvironmentRecord extends DeclarativeEnvironmentRecord {
   /** https://tc39.es/ecma262/#sec-module-environment-records-getbindingvalue-n-s */
-  GetBindingValue(N, S) {
+  override GetBindingValue(N: JSStringValue, S: BooleanValue) {
     // 1. Assert: S is true.
     Assert(S === Value.true);
     // 2. Let envRec be the module Environment Record for which the method was invoked.
@@ -814,12 +885,12 @@ export class ModuleEnvironmentRecord extends DeclarativeEnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-module-environment-records-deletebinding-n */
-  DeleteBinding() {
+  override DeleteBinding(): never {
     Assert(false, 'This method is never invoked. See #sec-delete-operator-static-semantics-early-errors');
   }
 
   /** https://tc39.es/ecma262/#sec-module-environment-records-hasthisbinding */
-  HasThisBinding() {
+  override HasThisBinding() {
     // Return true.
     return Value.true;
   }
@@ -831,7 +902,7 @@ export class ModuleEnvironmentRecord extends DeclarativeEnvironmentRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-createimportbinding */
-  CreateImportBinding(N, M, N2) {
+  CreateImportBinding(N: JSStringValue, M: AbstractModuleRecord, N2: JSStringValue) {
     // 1. Let envRec be the module Environment Record for which the method was invoked.
     const envRec = this;
     // 2. Assert: envRec does not already have a binding for N.
@@ -855,9 +926,9 @@ export class ModuleEnvironmentRecord extends DeclarativeEnvironmentRecord {
 }
 
 /** https://tc39.es/ecma262/#sec-getidentifierreference */
-export function GetIdentifierReference(env, name, strict) {
+export function GetIdentifierReference(env: EnvironmentRecord | NullValue, name: JSStringValue, strict: BooleanValue) {
   // 1. If lex is the value null, then
-  if (env === Value.null) {
+  if (env instanceof NullValue) {
     // a. Return the Reference Record { [[Base]]: unresolvable, [[ReferencedName]]: name, [[Strict]]: strict, [[ThisValue]]: empty }.
     return new ReferenceRecord({
       Base: 'unresolvable',
@@ -886,7 +957,7 @@ export function GetIdentifierReference(env, name, strict) {
 }
 
 /** https://tc39.es/ecma262/#sec-newdeclarativeenvironment */
-export function NewDeclarativeEnvironment(E) {
+export function NewDeclarativeEnvironment(E: EnvironmentRecord | NullValue) {
   // 1. Let env be a new declarative Environment Record containing O as the binding object.
   const env = new DeclarativeEnvironmentRecord();
   // 2. Set env.[[OuterEnv]] to E.
@@ -896,67 +967,25 @@ export function NewDeclarativeEnvironment(E) {
 }
 
 /** https://tc39.es/ecma262/#sec-newobjectenvironment */
-export function NewObjectEnvironment(O, W, E) {
-  // 1. Let env be a new object Environment Record.
-  const env = new ObjectEnvironmentRecord();
-  // 2. Set env.[[BindingObject]] to O.
-  env.BindingObject = O;
-  // 3. Set env.[[IsWithEnvironment]] to W.
-  env.IsWithEnvironment = W;
-  // 4. Set env.[[OuterEnv]] to E.
-  env.OuterEnv = E;
-  // 5. Return env.
-  return env;
+export function NewObjectEnvironment(O: ObjectValue, W: BooleanValue, E: EnvironmentRecord | NullValue) {
+  // steps are delegated to the constructor
+  return new ObjectEnvironmentRecord(O, W, E);
 }
 
 /** https://tc39.es/ecma262/#sec-newfunctionenvironment */
-export function NewFunctionEnvironment(F, newTarget) {
-  // 1. Assert: F is an ECMAScript function.
-  Assert(isECMAScriptFunctionObject(F));
-  // 2. Assert: Type(newTarget) is Undefined or Object.
-  Assert(newTarget instanceof UndefinedValue || newTarget instanceof ObjectValue);
-  // 3. Let env be a new function Environment Record containing no bindings.
-  const env = new FunctionEnvironmentRecord();
-  // 4. Set env.[[FunctionObject]] to F.
-  env.FunctionObject = F;
-  // 5. If F.[[ThisMode]] is lexical, set env.[[ThisBindingStatus]] to lexical.
-  if (F.ThisMode === 'lexical') {
-    env.ThisBindingStatus = 'lexical';
-  } else { // 6. Else, set env.[[ThisBindingStatus]] to uninitialized.
-    env.ThisBindingStatus = 'uninitialized';
-  }
-  // 7. Set env.[[NewTarget]] to newTarget.
-  env.NewTarget = newTarget;
-  // 8. Set env.[[OuterEnv]] to F.[[Environment]].
-  env.OuterEnv = F.Environment;
-  // 9. Return env.
-  return env;
+export function NewFunctionEnvironment(F, newTarget: ObjectValue | UndefinedValue) {
+  // steps are delegated to the constructor
+  return new FunctionEnvironmentRecord(F, newTarget);
 }
 
 /** https://tc39.es/ecma262/#sec-newglobalenvironment */
-export function NewGlobalEnvironment(G, thisValue) {
-  // 1. Let objRec be NewObjectEnvironment(G, false, null).
-  const objRec = NewObjectEnvironment(G, Value.false, Value.null);
-  // 2. Let dclRec be a new declarative Environment Record containing no bindings.
-  const dclRec = new DeclarativeEnvironmentRecord(Value.null);
-  // 3. Let env be a new global Environment Record.
-  const env = new GlobalEnvironmentRecord();
-  // 4. Set env.[[ObjectRecord]] to objRec.
-  env.ObjectRecord = objRec;
-  // 5. Set env.[[GlobalThisValue]] to thisValue.
-  env.GlobalThisValue = thisValue;
-  // 6. Set env.[[DeclarativeRecord]] to dclRec.
-  env.DeclarativeRecord = dclRec;
-  // 7. Set env.[[VarNames]] to a new empty List.
-  env.VarNames = [];
-  // 8. Set env.[[OuterEnv]] to null.
-  env.OuterEnv = Value.null;
-  // 9. Return env.
-  return env;
+export function NewGlobalEnvironment(G: ObjectValue, thisValue: ObjectValue) {
+  // steps are delegated to the constructor
+  return new GlobalEnvironmentRecord(G, thisValue);
 }
 
 /** https://tc39.es/ecma262/#sec-newmoduleenvironment */
-export function NewModuleEnvironment(E) {
+export function NewModuleEnvironment(E: EnvironmentRecord) {
   // 1. Let env be a new module Environment Record containing no bindings.
   const env = new ModuleEnvironmentRecord();
   // 2. Set env.[[OuterEnv]] to E.
@@ -965,15 +994,15 @@ export function NewModuleEnvironment(E) {
   return env;
 }
 
-class PrivateEnvironmentRecord {
-  OuterPrivateEnvironment;
-  Names;
-  constructor(init) {
-    this.OuterPrivateEnvironment = init.OuterPrivateEnvironment;
-    this.Names = init.Names;
+export class PrivateEnvironmentRecord {
+  OuterPrivateEnvironment: PrivateEnvironmentRecord | NullValue;
+  Names: PrivateName[] = [];
+  /** https://tc39.es/ecma262/#sec-newprivateenvironment */
+  constructor(outerPrivEnv: PrivateEnvironmentRecord | NullValue) {
+    this.OuterPrivateEnvironment = outerPrivEnv;
   }
 
-  mark(m) {
+  mark(m: GCMarker) {
     this.Names.forEach((name) => {
       m(name);
     });
@@ -981,12 +1010,7 @@ class PrivateEnvironmentRecord {
 }
 
 /** https://tc39.es/ecma262/#sec-newprivateenvironment */
-export function NewPrivateEnvironment(outerPrivEnv) {
-  // 1. Let names be a new empty List.
-  const names = [];
-  // 2. Return the PrivateEnvironment Record { [[OuterPrivateEnvironment]]: outerPrivEnv, [[Names]]: names }.
-  return new PrivateEnvironmentRecord({
-    OuterPrivateEnvironment: outerPrivEnv,
-    Names: names,
-  });
+export function NewPrivateEnvironment(outerPrivEnv: PrivateEnvironmentRecord | NullValue) {
+  // steps are delegated to the constructor
+  return new PrivateEnvironmentRecord(outerPrivEnv);
 }

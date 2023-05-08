@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Get,
   OrdinaryCreateFromConstructor,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   Value,
@@ -33,7 +33,7 @@ function WeakMapConstructor([iterable = Value.undefined], { NewTarget }) {
   return Q(AddEntriesFromIterable(map, iterable, adder));
 }
 
-export function bootstrapWeakMap(realmRec) {
+export function bootstrapWeakMap(realmRec: Realm) {
   const c = bootstrapConstructor(realmRec, WeakMapConstructor, 'WeakMap', 0, realmRec.Intrinsics['%WeakMap.prototype%'], []);
 
   realmRec.Intrinsics['%WeakMap%'] = c;

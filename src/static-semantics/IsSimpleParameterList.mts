@@ -1,8 +1,7 @@
-// @ts-nocheck
-import { OutOfRange } from '../helpers.mjs';
+import { OutOfRange, isArray } from '../helpers.mjs';
 
 export function IsSimpleParameterList(node) {
-  if (Array.isArray(node)) {
+  if (isArray(node)) {
     for (const n of node) {
       if (!IsSimpleParameterList(n)) {
         return false;

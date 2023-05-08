@@ -1,8 +1,7 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { ObjectValue, Value, wellKnownSymbols } from '../value.mjs';
 import { Q } from '../completion.mjs';
-import { ToIndex, AllocateArrayBuffer } from '../abstract-ops/all.mjs';
+import { ToIndex, AllocateArrayBuffer, Realm } from '../abstract-ops/all.mjs';
 import { bootstrapConstructor } from './bootstrap.mjs';
 
 /** https://tc39.es/ecma262/#sec-arraybuffer-length */
@@ -36,7 +35,7 @@ function ArrayBuffer_species(a, { thisValue }) {
   return thisValue;
 }
 
-export function bootstrapArrayBuffer(realmRec) {
+export function bootstrapArrayBuffer(realmRec: Realm) {
   const c = bootstrapConstructor(realmRec, ArrayBufferConstructor, 'ArrayBuffer', 1, realmRec.Intrinsics['%ArrayBuffer.prototype%'], [
     ['isView', ArrayBuffer_isView, 1],
     [wellKnownSymbols.species, [ArrayBuffer_species]],

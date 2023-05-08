@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Q, X } from '../completion.mjs';
 import { CreateDynamicFunction } from '../runtime-semantics/all.mjs';
 import { Descriptor, Value } from '../value.mjs';
+import type { Realm } from '../api.mjs';
 import { bootstrapConstructor } from './bootstrap.mjs';
 
 /** https://tc39.es/ecma262/#sec-asyncgeneratorfunction */
@@ -14,7 +14,7 @@ function AsyncGeneratorFunctionConstructor(args, { NewTarget }) {
   return Q(CreateDynamicFunction(C, NewTarget, 'asyncGenerator', args));
 }
 
-export function bootstrapAsyncGeneratorFunction(realmRec) {
+export function bootstrapAsyncGeneratorFunction(realmRec: Realm) {
   const cons = bootstrapConstructor(realmRec, AsyncGeneratorFunctionConstructor, 'AsyncGeneratorFunction', 1, realmRec.Intrinsics['%AsyncGeneratorFunction.prototype%'], []);
 
   X(cons.DefineOwnProperty(Value('prototype'), Descriptor({

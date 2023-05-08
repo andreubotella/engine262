@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Call,
   F,
   IsCallable,
+  Realm,
   RequireInternalSlot,
   SameValueZero,
 } from '../abstract-ops/all.mjs';
@@ -196,7 +196,7 @@ function MapProto_values(args, { thisValue }) {
   return Q(CreateMapIterator(M, 'value'));
 }
 
-export function bootstrapMapPrototype(realmRec) {
+export function bootstrapMapPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['clear', MapProto_clear, 0],
     ['delete', MapProto_delete, 1],

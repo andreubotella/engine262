@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   ObjectValue,
@@ -26,6 +25,7 @@ import {
   StringCreate,
   Yield,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   GetSubstitution,
@@ -779,7 +779,7 @@ function StringProto_at([index = Value.undefined], { thisValue }) {
   return Value(S.stringValue()[k]);
 }
 
-export function bootstrapStringPrototype(realmRec) {
+export function bootstrapStringPrototype(realmRec: Realm) {
   const proto = StringCreate(Value(''), realmRec.Intrinsics['%Object.prototype%']);
 
   assignProps(realmRec, proto, [

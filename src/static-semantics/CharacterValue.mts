@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { OutOfRange } from '../helpers.mjs';
 import { UTF16SurrogatePairToCodePoint } from './all.mjs';
 

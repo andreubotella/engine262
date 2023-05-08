@@ -1,8 +1,8 @@
-// @ts-nocheck
+import { isArray } from '../helpers.mjs';
 import { DeclarationPart, VarScopedDeclarations } from './all.mjs';
 
 export function TopLevelVarScopedDeclarations(node) {
-  if (Array.isArray(node)) {
+  if (isArray(node)) {
     const declarations = [];
     for (const item of node) {
       declarations.push(...TopLevelVarScopedDeclarations(item));

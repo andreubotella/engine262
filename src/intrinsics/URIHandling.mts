@@ -1,9 +1,9 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Value } from '../value.mjs';
 import {
   Assert,
   CreateBuiltinFunction,
+  Realm,
   ToString,
 } from '../abstract-ops/all.mjs';
 import { CodePointAt } from '../static-semantics/all.mjs';
@@ -309,7 +309,7 @@ function encodeURIComponent([uriComponent = Value.undefined]) {
   return Q(Encode(componentString, unescapedURIComponentSet));
 }
 
-export function bootstrapURIHandling(realmRec) {
+export function bootstrapURIHandling(realmRec: Realm) {
   [
     ['decodeURI', decodeURI, 1],
     ['decodeURIComponent', decodeURIComponent, 1],

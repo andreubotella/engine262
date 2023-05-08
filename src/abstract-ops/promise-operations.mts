@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   HostMakeJobCallback,
   HostCallJobCallback,
@@ -27,6 +26,7 @@ import {
   SameValue,
   GetFunctionRealm,
   isFunctionObject,
+  type FunctionObject,
 } from './all.mjs';
 
 // This file covers abstract operations defined in
@@ -34,9 +34,9 @@ import {
 
 /** https://tc39.es/ecma262/#sec-promisecapability-records */
 export class PromiseCapabilityRecord {
-  Promise;
-  Resolve;
-  Reject;
+  Promise: ObjectValue;
+  Resolve: FunctionObject;
+  Reject: FunctionObject;
   constructor() {
     this.Promise = Value.undefined;
     this.Resolve = Value.undefined;

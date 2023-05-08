@@ -1,18 +1,22 @@
-// @ts-nocheck
-import { Q } from '../completion.mjs';
+import { NormalCompletion, Q, ThrowCompletion } from '../completion.mjs';
 import { surroundingAgent } from '../engine.mjs';
 import {
   GetIdentifierReference,
   EnvironmentRecord,
+  FunctionEnvironmentRecord,
 } from '../environment.mjs';
-import { Value } from '../value.mjs';
+import type { AbstractModuleRecord } from '../modules.mjs';
+import type { ScriptRecord } from '../parse.mjs';
+import {
+  JSStringValue, NullValue, ObjectValue, ReferenceRecord, UndefinedValue, Value,
+} from '../value.mjs';
 import { Assert } from './all.mjs';
 
 // This file covers abstract operations defined in
 /** https://tc39.es/ecma262/#sec-execution-contexts */
 
 /** https://tc39.es/ecma262/#sec-getactivescriptormodule */
-export function GetActiveScriptOrModule() {
+export function GetActiveScriptOrModule(): AbstractModuleRecord | ScriptRecord | NullValue {
   for (let i = surroundingAgent.executionContextStack.length - 1; i >= 0; i -= 1) {
     const e = surroundingAgent.executionContextStack[i];
     if (e.ScriptOrModule !== Value.null) {
@@ -23,7 +27,7 @@ export function GetActiveScriptOrModule() {
 }
 
 /** https://tc39.es/ecma262/#sec-resolvebinding */
-export function ResolveBinding(name, env, strict) {
+export function ResolveBinding(name: JSStringValue, env: EnvironmentRecord | UndefinedValue, strict: boolean): NormalCompletion<ReferenceRecord> | ThrowCompletion {
   // 1. If env is not present or if env is undefined, then
   if (env === undefined || env === Value.undefined) {
     // a. Set env to the running execution context's LexicalEnvironment.
@@ -37,7 +41,7 @@ export function ResolveBinding(name, env, strict) {
 }
 
 /** https://tc39.es/ecma262/#sec-getthisenvironment */
-export function GetThisEnvironment() {
+export function GetThisEnvironment(): EnvironmentRecord {
   // 1. Let env be the running execution context's LexicalEnvironment.
   let env = surroundingAgent.runningExecutionContext.LexicalEnvironment;
   // 2. Repeat,
@@ -51,27 +55,27 @@ export function GetThisEnvironment() {
     // c. Let outer be env.[[OuterEnv]].
     const outer = env.OuterEnv;
     // d. Assert: outer is not null.
-    Assert(outer !== Value.null);
+    Assert(!(outer instanceof NullValue));
     // e. Set env to outer.
     env = outer;
   }
 }
 
 /** https://tc39.es/ecma262/#sec-resolvethisbinding */
-export function ResolveThisBinding() {
+export function ResolveThisBinding(): NormalCompletion | ThrowCompletion {
   const envRec = GetThisEnvironment();
   return Q(envRec.GetThisBinding());
 }
 
 /** https://tc39.es/ecma262/#sec-getnewtarget */
-export function GetNewTarget() {
+export function GetNewTarget(): ObjectValue | UndefinedValue {
   const envRec = GetThisEnvironment();
   Assert('NewTarget' in envRec);
-  return envRec.NewTarget;
+  return (envRec as FunctionEnvironmentRecord).NewTarget;
 }
 
 /** https://tc39.es/ecma262/#sec-getglobalobject */
-export function GetGlobalObject() {
+export function GetGlobalObject(): ObjectValue {
   const currentRealm = surroundingAgent.currentRealmRecord;
   return currentRealm.GlobalObject;
 }

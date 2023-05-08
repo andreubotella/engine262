@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Value } from '../value.mjs';
 import { Q } from '../completion.mjs';
@@ -6,6 +5,7 @@ import {
   RequireInternalSlot, IsDetachedBuffer, IsSharedArrayBuffer,
   SpeciesConstructor, Construct, ToIntegerOrInfinity, SameValue, CopyDataBlockBytes,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { bootstrapPrototype } from './bootstrap.mjs';
 
@@ -107,7 +107,7 @@ function ArrayBufferProto_slice([start = Value.undefined, end = Value.undefined]
   return newO;
 }
 
-export function bootstrapArrayBufferPrototype(realmRec) {
+export function bootstrapArrayBufferPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['byteLength', [ArrayBufferProto_byteLength]],
     ['slice', ArrayBufferProto_slice, 2],

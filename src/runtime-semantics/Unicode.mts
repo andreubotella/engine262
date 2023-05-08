@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Assert } from '../abstract-ops/all.mjs';
 import UnicodeSets from '../data-gen.json';
 

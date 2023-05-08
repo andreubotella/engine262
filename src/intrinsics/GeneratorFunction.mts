@@ -1,7 +1,6 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Descriptor, Value } from '../value.mjs';
-import { DefinePropertyOrThrow } from '../abstract-ops/all.mjs';
+import { DefinePropertyOrThrow, Realm } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { CreateDynamicFunction } from '../runtime-semantics/all.mjs';
 import { bootstrapConstructor } from './bootstrap.mjs';
@@ -15,7 +14,7 @@ function GeneratorFunctionConstructor(args, { NewTarget }) {
   return Q(CreateDynamicFunction(C, NewTarget, 'generator', args));
 }
 
-export function bootstrapGeneratorFunction(realmRec) {
+export function bootstrapGeneratorFunction(realmRec: Realm) {
   const generator = realmRec.Intrinsics['%GeneratorFunction.prototype%'];
 
   const cons = bootstrapConstructor(realmRec, GeneratorFunctionConstructor, 'GeneratorFunction', 1, generator, []);

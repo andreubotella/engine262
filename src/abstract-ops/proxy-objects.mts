@@ -1,10 +1,10 @@
-// @ts-nocheck
+// @ts-nochecka
 import { surroundingAgent } from '../engine.mjs';
 import {
   UndefinedValue, NullValue, ObjectValue, Value,
 } from '../value.mjs';
-import { Q, X } from '../completion.mjs';
-import { ValueSet } from '../helpers.mjs';
+import { NormalCompletion, Q, ThrowCompletion, X } from '../completion.mjs';
+import { ValueSet, type Mutable, CastType } from '../helpers.mjs';
 import {
   Assert,
   MakeBasicObject,
@@ -25,10 +25,22 @@ import {
   IsCompatiblePropertyDescriptor,
   IsDataDescriptor,
   IsAccessorDescriptor,
+  type FunctionObject,
+  type ConstructorObject,
 } from './all.mjs';
 
+/** https://tc39.es/ecma262/#proxy-exotic-object */
+export interface ProxyExoticObject extends ObjectValue {
+  ProxyHandler: NullValue | ObjectValue;
+  ProxyTarget: NullValue | ObjectValue
+  readonly [Symbol.toStringTag]: 'ProxyExoticObject';
+}
+export interface CallableProxyExoticObject extends ProxyExoticObject, FunctionObject {
+  readonly [Symbol.toStringTag]: 'ProxyExoticObject';
+}
+
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-getprototypeof */
-function ProxyGetPrototypeOf() {
+function ProxyGetPrototypeOf(this: ProxyExoticObject) {
   const O = this;
 
   const handler = O.ProxyHandler;
@@ -57,7 +69,7 @@ function ProxyGetPrototypeOf() {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-setprototypeof-v */
-function ProxySetPrototypeOf(V) {
+function ProxySetPrototypeOf(this: ProxyExoticObject, V) {
   const O = this;
 
   Assert(V instanceof ObjectValue || V instanceof NullValue);
@@ -87,7 +99,7 @@ function ProxySetPrototypeOf(V) {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-isextensible */
-function ProxyIsExtensible() {
+function ProxyIsExtensible(this: ProxyExoticObject) {
   const O = this;
 
   const handler = O.ProxyHandler;
@@ -109,7 +121,7 @@ function ProxyIsExtensible() {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-preventextensions */
-function ProxyPreventExtensions() {
+function ProxyPreventExtensions(this: ProxyExoticObject) {
   const O = this;
 
   const handler = O.ProxyHandler;
@@ -133,7 +145,7 @@ function ProxyPreventExtensions() {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-getownproperty-p */
-function ProxyGetOwnProperty(P) {
+function ProxyGetOwnProperty(this: ProxyExoticObject, P) {
   const O = this;
 
   // 1. Assert: IsPropertyKey(P) is true.
@@ -214,7 +226,7 @@ function ProxyGetOwnProperty(P) {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-defineownproperty-p-desc */
-function ProxyDefineOwnProperty(P, Desc) {
+function ProxyDefineOwnProperty(this: ProxyExoticObject, P, Desc) {
   const O = this;
 
   // 1. Assert: IsPropertyKey(P) is true.
@@ -290,7 +302,7 @@ function ProxyDefineOwnProperty(P, Desc) {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-hasproperty-p */
-function ProxyHasProperty(P) {
+function ProxyHasProperty(this: ProxyExoticObject, P) {
   const O = this;
 
   Assert(IsPropertyKey(P));
@@ -321,7 +333,7 @@ function ProxyHasProperty(P) {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-get-p-receiver */
-function ProxyGet(P, Receiver) {
+function ProxyGet(this: ProxyExoticObject, P, Receiver) {
   const O = this;
 
   Assert(IsPropertyKey(P));
@@ -353,7 +365,7 @@ function ProxyGet(P, Receiver) {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-set-p-v-receiver */
-function ProxySet(P, V, Receiver) {
+function ProxySet(this: ProxyExoticObject, P, V, Receiver) {
   const O = this;
 
   Assert(IsPropertyKey(P));
@@ -388,7 +400,7 @@ function ProxySet(P, V, Receiver) {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-delete-p */
-function ProxyDelete(P) {
+function ProxyDelete(this: ProxyExoticObject, P) {
   const O = this;
 
   // 1. Assert: IsPropertyKey(P) is true.
@@ -437,7 +449,7 @@ function ProxyDelete(P) {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-ownpropertykeys */
-function ProxyOwnPropertyKeys() {
+function ProxyOwnPropertyKeys(this: ProxyExoticObject) {
   const O = this;
 
   const handler = O.ProxyHandler;
@@ -445,7 +457,7 @@ function ProxyOwnPropertyKeys() {
     return surroundingAgent.Throw('TypeError', 'ProxyRevoked', 'ownKeys');
   }
   Assert(handler instanceof ObjectValue);
-  const target = O.ProxyTarget;
+  const target = O.ProxyTarget as ObjectValue; // handler and target should be both object or both null.
   const trap = Q(GetMethod(handler, Value('ownKeys')));
   if (trap === Value.undefined) {
     return Q(target.OwnPropertyKeys());
@@ -463,7 +475,7 @@ function ProxyOwnPropertyKeys() {
   const targetNonconfigurableKeys = [];
   for (const key of targetKeys) {
     const desc = Q(target.GetOwnProperty(key));
-    if (desc !== Value.undefined && desc.Configurable === Value.false) {
+    if (!(desc instanceof UndefinedValue) && desc.Configurable === Value.false) {
       targetNonconfigurableKeys.push(key);
     } else {
       targetConfigurableKeys.push(key);
@@ -495,7 +507,7 @@ function ProxyOwnPropertyKeys() {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-call-thisargument-argumentslist */
-function ProxyCall(thisArgument, argumentsList) {
+function ProxyCall(this: ProxyExoticObject, thisArgument: Value, argumentsList: readonly Value[]) {
   const O = this;
 
   const handler = O.ProxyHandler;
@@ -513,7 +525,7 @@ function ProxyCall(thisArgument, argumentsList) {
 }
 
 /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-construct-argumentslist-newtarget */
-function ProxyConstruct(argumentsList, newTarget) {
+function ProxyConstruct(this: ProxyExoticObject, argumentsList: readonly Value[], newTarget: ConstructorObject) {
   const O = this;
 
   const handler = O.ProxyHandler;
@@ -535,12 +547,12 @@ function ProxyConstruct(argumentsList, newTarget) {
   return newObj;
 }
 
-export function isProxyExoticObject(O) {
+export function isProxyExoticObject(O: ObjectValue): O is ProxyExoticObject {
   return 'ProxyHandler' in O;
 }
 
 /** https://tc39.es/ecma262/#sec-proxycreate */
-export function ProxyCreate(target, handler) {
+export function ProxyCreate(target: Value, handler: Value): NormalCompletion<ProxyExoticObject> | ThrowCompletion {
   // 1. If Type(target) is not Object, throw a TypeError exception.
   if (!(target instanceof ObjectValue)) {
     return surroundingAgent.Throw('TypeError', 'CannotCreateProxyWith', 'non-object', 'target');
@@ -550,7 +562,7 @@ export function ProxyCreate(target, handler) {
     return surroundingAgent.Throw('TypeError', 'CannotCreateProxyWith', 'non-object', 'handler');
   }
   // 3. Let P be ! MakeBasicObject(« [[ProxyHandler]], [[ProxyTarget]] »).
-  const P = X(MakeBasicObject(['ProxyHandler', 'ProxyTarget']));
+  const P = X(MakeBasicObject(['ProxyHandler', 'ProxyTarget'])) as Mutable<ProxyExoticObject>;
   // 4. Set P's essential internal methods, except for [[Call]] and [[Construct]], to the definitions specified in 9.5.
   P.GetPrototypeOf = ProxyGetPrototypeOf;
   P.SetPrototypeOf = ProxySetPrototypeOf;
@@ -565,6 +577,7 @@ export function ProxyCreate(target, handler) {
   P.OwnPropertyKeys = ProxyOwnPropertyKeys;
   // 5. If IsCallable(target) is true, then
   if (IsCallable(target) === Value.true) {
+    CastType<CallableProxyExoticObject>(P);
     /** https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-call-thisargument-argumentslist. */
     P.Call = ProxyCall;
     // b. If IsConstructor(target) is true, then

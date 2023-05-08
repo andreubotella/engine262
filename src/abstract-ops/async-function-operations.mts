@@ -1,16 +1,15 @@
-// @ts-nocheck
-import { EnsureCompletion, X } from '../completion.mjs';
-import { surroundingAgent } from '../engine.mjs';
+import { EnsureCompletion, X, unused } from '../completion.mjs';
+import { ExecutionContext, surroundingAgent } from '../engine.mjs';
 import { Evaluate } from '../evaluator.mjs';
 import { Value } from '../value.mjs';
 import { resume } from '../helpers.mjs';
-import { Assert, Call } from './all.mjs';
+import { Assert, Call, PromiseCapabilityRecord } from './all.mjs';
 
 // This file covers abstract operations defined in
 /** https://tc39.es/ecma262/#sec-async-function-objects */
 
 /** https://tc39.es/ecma262/#sec-asyncblockstart */
-export function AsyncBlockStart(promiseCapability, asyncBody, asyncContext) {
+export function AsyncBlockStart(promiseCapability: PromiseCapabilityRecord, asyncBody, asyncContext: ExecutionContext): unused {
   asyncContext.promiseCapability = promiseCapability;
 
   const runningContext = surroundingAgent.runningExecutionContext;
@@ -32,11 +31,10 @@ export function AsyncBlockStart(promiseCapability, asyncBody, asyncContext) {
   const result = EnsureCompletion(resume(asyncContext, undefined));
   Assert(surroundingAgent.runningExecutionContext === runningContext);
   Assert(result.Type === 'normal' && result.Value === Value.undefined);
-  return Value.undefined;
 }
 
 /** https://tc39.es/ecma262/#sec-async-functions-abstract-operations-async-function-start */
-export function AsyncFunctionStart(promiseCapability, asyncFunctionBody) {
+export function AsyncFunctionStart(promiseCapability: PromiseCapabilityRecord, asyncFunctionBody): unused {
   const runningContext = surroundingAgent.runningExecutionContext;
   const asyncContext = runningContext.copy();
   X(AsyncBlockStart(promiseCapability, asyncFunctionBody, asyncContext));

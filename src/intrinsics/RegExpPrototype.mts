@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   BooleanValue,
@@ -36,6 +35,7 @@ import {
   ToUint32,
   RegExpHasFlag,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { RegExpState as State, GetSubstitution } from '../runtime-semantics/all.mjs';
 import { CodePointAt } from '../static-semantics/all.mjs';
@@ -766,7 +766,7 @@ function RegExpProto_unicodeGetter(args, { thisValue }) {
   return Q(RegExpHasFlag(R, cu));
 }
 
-export function bootstrapRegExpPrototype(realmRec) {
+export function bootstrapRegExpPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(
     realmRec,
     [

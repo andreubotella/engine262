@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import { Q } from '../completion.mjs';
 import { Value } from '../value.mjs';
@@ -6,6 +5,7 @@ import {
   Assert,
   CreateBuiltinFunction,
   PerformEval,
+  Realm,
 } from '../abstract-ops/all.mjs';
 
 /** https://tc39.es/ecma262/#sec-eval-x */
@@ -20,6 +20,6 @@ function Eval([x = Value.undefined]) {
   return Q(PerformEval(x, callerRealm, false, false));
 }
 
-export function bootstrapEval(realmRec) {
+export function bootstrapEval(realmRec: Realm) {
   realmRec.Intrinsics['%eval%'] = CreateBuiltinFunction(Eval, 1, Value('eval'), [], realmRec);
 }

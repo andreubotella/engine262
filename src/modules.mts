@@ -1,7 +1,8 @@
-// @ts-nocheck
-import { NewModuleEnvironment } from './environment.mjs';
-import { Value, JSStringValue } from './value.mjs';
-import { ExecutionContext, surroundingAgent } from './engine.mjs';
+import { ModuleEnvironmentRecord, NewModuleEnvironment } from './environment.mjs';
+import {
+  Value, JSStringValue, BooleanValue, ObjectValue, UndefinedValue,
+} from './value.mjs';
+import { ExecutionContext, surroundingAgent, type GCMarker } from './engine.mjs';
 import {
   Assert,
   Call,
@@ -16,6 +17,7 @@ import {
   AsyncBlockStart,
   PromiseCapabilityRecord,
   GraphLoadingState,
+  Realm,
 } from './abstract-ops/all.mjs';
 import {
   VarScopedDeclarations,
@@ -29,66 +31,77 @@ import {
   NormalCompletion,
   AbruptCompletion,
   EnsureCompletion,
-  Q, X,
+  Q, X, ThrowCompletion, unused,
 } from './completion.mjs';
 import { ValueSet, unwind } from './helpers.mjs';
 import { Evaluate } from './evaluator.mjs';
+import type { LoadedModule } from './parse.mjs';
 
-// #resolvedbinding-record
+/** https://tc39.es/ecma262/#resolvedbinding-record */
 export class ResolvedBindingRecord {
-  Module;
-  BindingName;
-  constructor({ Module, BindingName }) {
+  readonly Module: AbstractModuleRecord;
+  readonly BindingName: JSStringValue | 'namespace';
+  constructor({ Module, BindingName }: Pick<ResolvedBindingRecord, 'BindingName' | 'Module'>) {
     Assert(Module instanceof AbstractModuleRecord);
     Assert(BindingName === 'namespace' || BindingName instanceof JSStringValue);
     this.Module = Module;
     this.BindingName = BindingName;
   }
 
-  mark(m) {
+  mark(m: GCMarker) {
     m(this.Module);
   }
 }
 
+type AbstractModuleRecordInit = Pick<AbstractModuleRecord, 'Realm' | 'Environment' | 'Namespace' | 'HostDefined'>;
 /** https://tc39.es/ecma262/#sec-abstract-module-records */
-export class AbstractModuleRecord {
-  Realm;
-  Environment;
-  Namespace;
-  HostDefined;
+export abstract class AbstractModuleRecord {
+  readonly Realm: Realm;
+  Environment: ModuleEnvironmentRecord | UndefinedValue;
+  Namespace: ObjectValue | UndefinedValue;
+  readonly HostDefined: unknown;
+  abstract LoadRequestedModules(hostDefined?: unknown): PromiseCapabilityRecord['Promise'];
+  abstract GetExportedNames(exportStarSet: unknown): JSStringValue[];
+  abstract ResolveExport(exportName: JSStringValue, reservedSet?: ResolveSetItem[]): ResolvedBindingRecord | null | 'ambiguous';
+  abstract Link(): NormalCompletion<void> | ThrowCompletion;
+  abstract Evaluate(): PromiseCapabilityRecord['Promise'];
   constructor({
     Realm,
     Environment,
     Namespace,
     HostDefined,
-  }) {
+  }: AbstractModuleRecordInit) {
     this.Realm = Realm;
     this.Environment = Environment;
     this.Namespace = Namespace;
     this.HostDefined = HostDefined;
   }
 
-  mark(m) {
+  mark(m: GCMarker) {
     m(this.Realm);
     m(this.Environment);
     m(this.Namespace);
   }
 }
 
+type CyclicModuleRecordInit = AbstractModuleRecordInit & Pick<CyclicModuleRecord, 'Status' | 'EvaluationError' | 'DFSIndex' | 'DFSAncestorIndex' | 'RequestedModules' | 'LoadedModules' | 'Async' | 'AsyncEvaluating' | 'TopLevelCapability' | 'AsyncParentModules' | 'PendingAsyncDependencies'>;
+
 /** https://tc39.es/ecma262/#sec-cyclic-module-records */
-export class CyclicModuleRecord extends AbstractModuleRecord {
-  Status;
-  EvaluationError;
-  DFSIndex;
-  DFSAncestorIndex;
-  RequestedModules;
-  LoadedModules;
-  Async;
-  AsyncEvaluating;
-  TopLevelCapability;
-  AsyncParentModules;
-  PendingAsyncDependencies;
-  constructor(init) {
+export abstract class CyclicModuleRecord extends AbstractModuleRecord {
+  Status: 'new' | 'unlinked' | 'linking' | 'linked' | 'evaluating' | 'evaluating-async' | 'evaluated';
+  EvaluationError: ThrowCompletion | UndefinedValue;
+  DFSIndex: number | undefined;
+  DFSAncestorIndex: number | undefined;
+  readonly RequestedModules: readonly JSStringValue[];
+  readonly LoadedModules: readonly LoadedModule[];
+  readonly Async: BooleanValue;
+  AsyncEvaluating: BooleanValue;
+  TopLevelCapability: PromiseCapabilityRecord | UndefinedValue;
+  AsyncParentModules: CyclicModuleRecord[];
+  PendingAsyncDependencies: number;
+  abstract InitializeEnvironment(): NormalCompletion<void> | ThrowCompletion;
+  abstract ExecuteModule(capability?: PromiseCapabilityRecord): NormalCompletion<void> | ThrowCompletion;
+  constructor(init: CyclicModuleRecordInit) {
     super(init);
     this.Status = init.Status;
     this.EvaluationError = init.EvaluationError;
@@ -121,12 +134,12 @@ export class CyclicModuleRecord extends AbstractModuleRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-moduledeclarationlinking */
-  Link() {
+  Link(): NormalCompletion<void> | ThrowCompletion {
     const module = this;
     // 1. Assert: module.[[Status]] is unlinked, linked, evaluating-async, or evaluated.
     Assert(module.Status === 'unlinked' || module.Status === 'linked' || module.Status === 'evaluating-async' || module.Status === 'evaluated');
     // 2. Let stack be a new empty List.
-    const stack = [];
+    const stack: CyclicModuleRecord[] = [];
     // 3. Let result be Completion(InnerModuleLinking(module, stack, 0)).
     const result = InnerModuleLinking(module, stack, 0);
     // 5. If result is an abrupt completion, then
@@ -148,7 +161,7 @@ export class CyclicModuleRecord extends AbstractModuleRecord {
     // 7. Assert: stack is empty.
     Assert(stack.length === 0);
     // 8. Return unused.
-    return NormalCompletion(undefined);
+    return unused;
   }
 
   /** https://tc39.es/ecma262/#sec-moduleevaluation */
@@ -163,12 +176,12 @@ export class CyclicModuleRecord extends AbstractModuleRecord {
       module = GetAsyncCycleRoot(module);
     }
     // (*TopLevelAwait) 4. If module.[[TopLevelCapability]] is not undefined, then
-    if (module.TopLevelCapability !== Value.undefined) {
+    if (!(module.TopLevelCapability instanceof UndefinedValue)) {
       // a. Return module.[[TopLevelCapability]].[[Promise]].
       return module.TopLevelCapability.Promise;
     }
     // 4. Let stack be a new empty List.
-    const stack = [];
+    const stack: CyclicModuleRecord[] = [];
     // (*TopLevelAwait) 6. Let capability be ! NewPromiseCapability(%Promise%).
     const capability = X(NewPromiseCapability(surroundingAgent.intrinsic('%Promise%')));
     // (*TopLevelAwait) 7. Set module.[[TopLevelCapability]] to capability.
@@ -209,7 +222,7 @@ export class CyclicModuleRecord extends AbstractModuleRecord {
     return capability.Promise;
   }
 
-  mark(m) {
+  override mark(m: GCMarker) {
     super.mark(m);
     m(this.EvaluationError);
     for (const v of this.LoadedModules) {
@@ -218,16 +231,23 @@ export class CyclicModuleRecord extends AbstractModuleRecord {
   }
 }
 
+type SourceTextModuleRecordInit = CyclicModuleRecordInit & Pick<SourceTextModuleRecord, 'ImportMeta' | 'ECMAScriptCode' | 'Context' | 'ImportEntries' | 'LocalExportEntries' | 'IndirectExportEntries' | 'StarExportEntries'>;
+
+interface ResolveSetItem {
+  readonly Module: AbstractModuleRecord;
+  readonly ExportName: JSStringValue;
+}
+
 /** https://tc39.es/ecma262/#sec-source-text-module-records */
 export class SourceTextModuleRecord extends CyclicModuleRecord {
-  ImportMeta;
+  ImportMeta: ObjectValue | undefined;
   ECMAScriptCode;
-  Context;
+  Context: ExecutionContext;
   ImportEntries;
   LocalExportEntries;
   IndirectExportEntries;
   StarExportEntries;
-  constructor(init) {
+  constructor(init: SourceTextModuleRecordInit) {
     super(init);
 
     this.ImportMeta = init.ImportMeta;
@@ -240,7 +260,7 @@ export class SourceTextModuleRecord extends CyclicModuleRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-getexportednames */
-  GetExportedNames(exportStarSet) {
+  GetExportedNames(exportStarSet: SourceTextModuleRecord[]): JSStringValue[] {
     const module = this;
     // 1. Assert: module.[[Status]] is not new.
     Assert(module.Status !== 'new');
@@ -257,7 +277,7 @@ export class SourceTextModuleRecord extends CyclicModuleRecord {
     // 4. Append module to exportStarSet.
     exportStarSet.push(module);
     // 5. Let exportedNames be a new empty List.
-    const exportedNames = [];
+    const exportedNames: JSStringValue[] = [];
     // 6. For each ExportEntry Record e in module.[[LocalExportEntries]], do
     for (const e of module.LocalExportEntries) {
       // a. Assert: module provides the direct binding for this export.
@@ -293,7 +313,7 @@ export class SourceTextModuleRecord extends CyclicModuleRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-resolveexport */
-  ResolveExport(exportName, resolveSet) {
+  ResolveExport(exportName: JSStringValue, resolveSet?: Array<ResolveSetItem>): ResolvedBindingRecord | null | 'ambiguous' {
     const module = this;
     // 1. Assert: module.[[Status]] is not new.
     Assert(module.Status !== 'new');
@@ -526,7 +546,7 @@ export class SourceTextModuleRecord extends CyclicModuleRecord {
   }
 
   /** https://tc39.es/ecma262/#sec-source-text-module-record-execute-module */
-  ExecuteModule(capability) {
+  ExecuteModule(capability?: PromiseCapabilityRecord): NormalCompletion<void> | ThrowCompletion {
     // 1. Let module be this Source Text Module Record.
     const module = this;
     // 2. Suspend the currently running execution context.
@@ -553,33 +573,36 @@ export class SourceTextModuleRecord extends CyclicModuleRecord {
     }
   }
 
-  mark(m) {
+  override mark(m: GCMarker) {
     super.mark(m);
     m(this.ImportMeta);
     m(this.Context);
   }
 }
 
-/** https://tc39.es/ecma262/#sec-synthetic-module-records */
+type SyntheticModuleRecordInit = AbstractModuleRecordInit & Pick<SyntheticModuleRecord, 'ExportNames' | 'EvaluationSteps'>;
+
 export class SyntheticModuleRecord extends AbstractModuleRecord {
-  ExportNames;
-  EvaluationSteps;
-  constructor(init) {
+  readonly ExportNames: readonly JSStringValue[];
+  readonly EvaluationSteps: (module: SyntheticModuleRecord) => NormalCompletion<void> | ThrowCompletion;
+  constructor(init: SyntheticModuleRecordInit) {
     super(init);
 
     this.ExportNames = init.ExportNames;
     this.EvaluationSteps = init.EvaluationSteps;
   }
 
-  /** https://tc39.es/ecma262/#sec-synthetic-module-record-getexportednames */
-  GetExportedNames(_exportStarSet) {
-    const module = this;
-    // 1. Return module.[[ExportNames]].
-    return module.ExportNames;
+  LoadRequestedModules(): ObjectValue {
+    Assert(false, 'This hook should not be called for synthetic modules');
   }
 
-  /** https://tc39.es/ecma262/#sec-synthetic-module-record-resolveexport */
-  ResolveExport(exportName, _resolveSet) {
+  GetExportedNames(_exportStarSet: unknown) {
+    const module = this;
+    // 1. Return module.[[ExportNames]].
+    return [...module.ExportNames];
+  }
+
+  ResolveExport(exportName: JSStringValue, _reservedSet?: ResolveSetItem[]): ResolvedBindingRecord | null {
     const module = this;
     // 1. If module.[[ExportNames]] does not contain exportName, return null.
     // 2. Return ResolvedBinding Record { [[Module]]: module, [[BindingName]]: exportName }.
@@ -591,7 +614,6 @@ export class SyntheticModuleRecord extends AbstractModuleRecord {
     return null;
   }
 
-  /** https://tc39.es/ecma262/#sec-synthetic-module-record-link */
   Link() {
     const module = this;
     // 1. Let realm be module.[[Realm]].
@@ -609,13 +631,12 @@ export class SyntheticModuleRecord extends AbstractModuleRecord {
       // b. Perform ! env.InitializeBinding(exportName, undefined).
       X(env.InitializeBinding(exportName, Value.undefined));
     }
-    // 8. Return undefined.
-    return Value.undefined;
+    // 8. Return unused.
   }
 
-  /** https://tc39.es/ecma262/#sec-synthetic-module-record-evaluate */
-  Evaluate() {
+  Evaluate(): PromiseCapabilityRecord['Promise'] {
     const module = this;
+    Assert(module.Environment instanceof ModuleEnvironmentRecord);
     // 1. Suspend the currently running execution context.
     // 2. Let moduleContext be a new ECMAScript code execution context.
     const moduleContext = new ExecutionContext();
@@ -641,9 +662,9 @@ export class SyntheticModuleRecord extends AbstractModuleRecord {
     return Completion(result);
   }
 
-  /** https://tc39.es/ecma262/#sec-synthetic-module-record-set-synthetic-export */
-  SetSyntheticExport(name, value) {
+  SetSyntheticExport(name: JSStringValue, value: Value) {
     const module = this;
+    Assert(module.Environment instanceof ModuleEnvironmentRecord);
     // 1. Return ? module.[[Environment]].SetMutableBinding(name, value, true).
     return Q(module.Environment.SetMutableBinding(name, value, Value.true));
   }

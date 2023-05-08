@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Evaluate_StatementList } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-module-semantics-runtime-semantics-evaluation */

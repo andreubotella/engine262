@@ -1,12 +1,15 @@
-// @ts-nocheck
-import { Value } from '../value.mjs';
+import {
+  ObjectValue, PrivateName, UndefinedValue, Value,
+} from '../value.mjs';
 import { surroundingAgent } from '../engine.mjs';
-import { Q, X } from '../completion.mjs';
+import {
+  NormalCompletion, Q, ThrowCompletion, X, unused,
+} from '../completion.mjs';
 import { PrivateElementRecord } from '../runtime-semantics/all.mjs';
 import { Assert, Call } from './all.mjs';
 
 /** https://tc39.es/ecma262/#sec-privateelementfind */
-export function PrivateElementFind(P, O) {
+export function PrivateElementFind(P: PrivateName, O: ObjectValue): PrivateElementRecord | undefined {
   const entry = O.PrivateElements.find((e) => e.Key === P);
   // 1. If O.[[PrivateElements]] contains a PrivateElement whose [[Key]] is P, then
   if (entry) {
@@ -19,7 +22,7 @@ export function PrivateElementFind(P, O) {
 }
 
 /** https://tc39.es/ecma262/#sec-privateget */
-export function PrivateGet(P, O) {
+export function PrivateGet(P: PrivateName, O: ObjectValue): NormalCompletion | ThrowCompletion {
   // 1. Let entry be ! PrivateElementFind(P, O).
   const entry = X(PrivateElementFind(P, O));
   // 2. If entry is empty, throw a TypeError exception.
@@ -34,7 +37,7 @@ export function PrivateGet(P, O) {
   // 4. Assert: entry.[[Kind]] is accessor.
   Assert(entry.Kind === 'accessor');
   // 5. If entry.[[Get]] is undefined, throw a TypeError exception.
-  if (entry.Get === Value.undefined) {
+  if (entry.Get instanceof UndefinedValue) {
     return surroundingAgent.Throw('TypeError', 'PrivateNameNoGetter', P);
   }
   // 6. Let getter be entry.[[Get]].
@@ -43,7 +46,7 @@ export function PrivateGet(P, O) {
   return Q(Call(getter, O));
 }
 
-export function PrivateSet(P, O, value) {
+export function PrivateSet(P: PrivateName, O: ObjectValue, value: Value): unused | ThrowCompletion {
   // 1. Let entry be ! PrivateElementFind(P, O).
   const entry = X(PrivateElementFind(P, O));
   // 2. If entry is empty, throw a TypeError exception.
@@ -61,7 +64,7 @@ export function PrivateSet(P, O, value) {
     // a. Assert: entry.[[Kind]] is accessor.
     Assert(entry.Kind === 'accessor');
     // b. If entry.[[Set]] is undefined, throw a TypeError exception.
-    if (entry.Set === Value.undefined) {
+    if (entry.Set instanceof UndefinedValue) {
       return surroundingAgent.Throw('TypeError', 'PrivateNameNoSetter', P);
     }
     // c. Let setter be entry.[[Set]].
@@ -72,7 +75,7 @@ export function PrivateSet(P, O, value) {
 }
 
 /** https://tc39.es/ecma262/#sec-privatemethodoraccessoradd */
-export function PrivateMethodOrAccessorAdd(method, O) {
+export function PrivateMethodOrAccessorAdd(method: PrivateElementRecord, O: ObjectValue): unused | ThrowCompletion {
   // 1. Assert: method.[[Kind]] is either method or accessor.
   Assert(method.Kind === 'method' || method.Kind === 'accessor');
   // 2. Let entry be ! PrivateElementFind(method.[[Key]], O).
@@ -88,7 +91,7 @@ export function PrivateMethodOrAccessorAdd(method, O) {
 }
 
 /** https://tc39.es/ecma262/#sec-privatefieldadd */
-export function PrivateFieldAdd(P, O, value) {
+export function PrivateFieldAdd(P: PrivateName, O: ObjectValue, value: Value): unused | ThrowCompletion {
   // 1. Let entry be ! PrivateElementFind(P, O).
   const entry = X(PrivateElementFind(P, O));
   // 2. If entry is not empty, throw a TypeError exception.

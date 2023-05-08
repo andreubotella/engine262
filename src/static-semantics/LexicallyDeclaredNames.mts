@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   TopLevelLexicallyDeclaredNames,
 } from './all.mjs';

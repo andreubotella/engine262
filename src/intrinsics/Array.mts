@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   surroundingAgent,
 } from '../engine.mjs';
@@ -30,6 +29,7 @@ import {
   ToString,
   ToUint32,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   NumberValue,
@@ -199,7 +199,7 @@ function Array_speciesGetter(args, { thisValue }) {
   return thisValue;
 }
 
-export function bootstrapArray(realmRec) {
+export function bootstrapArray(realmRec: Realm) {
   const proto = realmRec.Intrinsics['%Array.prototype%'];
 
   const cons = bootstrapConstructor(realmRec, ArrayConstructor, 'Array', 1, proto, [

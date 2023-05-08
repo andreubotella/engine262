@@ -1,7 +1,7 @@
-// @ts-nocheck
 import {
   ToNumber,
   CreateBuiltinFunction,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Value } from '../value.mjs';
 import { Q } from '../completion.mjs';
@@ -18,6 +18,6 @@ function IsNaN([number = Value.undefined]) {
   return Value.false;
 }
 
-export function bootstrapIsNaN(realmRec) {
+export function bootstrapIsNaN(realmRec: Realm) {
   realmRec.Intrinsics['%isNaN%'] = CreateBuiltinFunction(IsNaN, 1, Value('isNaN'), [], realmRec);
 }

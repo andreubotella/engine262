@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ModuleParser } from './ModuleParser.mjs';
 import { Token } from './tokens.mjs';
 

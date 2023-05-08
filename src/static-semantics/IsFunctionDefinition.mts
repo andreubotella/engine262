@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function IsFunctionDefinition(node) {
   if (node.type === 'ParenthesizedExpression') {
     return IsFunctionDefinition(node.Expression);

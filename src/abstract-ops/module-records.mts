@@ -1,14 +1,16 @@
-// @ts-nocheck
 import { surroundingAgent, HostLoadImportedModule } from '../engine.mjs';
 import {
   CyclicModuleRecord,
   SyntheticModuleRecord,
   ResolvedBindingRecord,
+  AbstractModuleRecord,
 } from '../modules.mjs';
-import { Value } from '../value.mjs';
+import { JSStringValue, UndefinedValue, Value } from '../value.mjs';
 import {
-  Q, X, NormalCompletion, ThrowCompletion,
+  Q, X, NormalCompletion, ThrowCompletion, unused, type NormalCompletionObject, EnsureCompletion,
 } from '../completion.mjs';
+import type { ScriptRecord } from '../parse.mjs';
+import { CastType } from '../helpers.mjs';
 import {
   Assert,
   ModuleNamespaceCreate,
@@ -17,23 +19,26 @@ import {
   CreateBuiltinFunction,
   Call,
   ContinueDynamicImport,
+  PromiseCapabilityRecord,
+  Realm,
+  type ModuleNamespaceExoticObject,
 } from './all.mjs';
 
 /** https://tc39.es/ecma262/#graphloadingstate-record */
 export class GraphLoadingState {
-  PromiseCapability;
-  HostDefined;
+  PromiseCapability: PromiseCapabilityRecord;
+  HostDefined: unknown;
   IsLoading = true;
-  Visited = new Set();
+  Visited = new Set<CyclicModuleRecord>();
   PendingModules = 1;
-  constructor({ PromiseCapability, HostDefined }) {
+  constructor({ PromiseCapability, HostDefined }: { PromiseCapability: PromiseCapabilityRecord, HostDefined: unknown }) {
     this.PromiseCapability = PromiseCapability;
     this.HostDefined = HostDefined;
   }
 }
 
 /** https://tc39.es/ecma262/#sec-InnerModuleLoading */
-export function InnerModuleLoading(state, module) {
+export function InnerModuleLoading(state: GraphLoadingState, module: AbstractModuleRecord): unused {
   // 1. Assert: state.[[IsLoading]] is true.
   Assert(state.IsLoading === true);
 
@@ -89,13 +94,13 @@ export function InnerModuleLoading(state, module) {
 }
 
 /** https://tc39.es/ecma262/#sec-ContinueModuleLoading */
-export function ContinueModuleLoading(state, result) {
+export function ContinueModuleLoading(state: GraphLoadingState, result: NormalCompletionObject<AbstractModuleRecord> | ThrowCompletion<Value>): unused {
   // 1. If state.[[IsLoading]] is false, return unused.
   if (state.IsLoading === false) {
     return;
   }
   // 2. If moduleCompletion is a normal completion, then
-  if (result instanceof NormalCompletion) {
+  if (result.Type === 'normal') {
     // a. Perform InnerModuleLoading(state, moduleCompletion.[[Value]]).
     InnerModuleLoading(state, result.Value);
   // 3. Else,
@@ -110,7 +115,7 @@ export function ContinueModuleLoading(state, result) {
 }
 
 /** https://tc39.es/ecma262/#sec-InnerModuleLinking */
-export function InnerModuleLinking(module, stack, index) {
+export function InnerModuleLinking(module: AbstractModuleRecord, stack: CyclicModuleRecord[], index: number): NormalCompletion<number> | ThrowCompletion {
   if (!(module instanceof CyclicModuleRecord)) {
     Q(module.Link());
     return index;
@@ -129,6 +134,7 @@ export function InnerModuleLinking(module, stack, index) {
     index = Q(InnerModuleLinking(requiredModule, stack, index));
     if (requiredModule instanceof CyclicModuleRecord) {
       Assert(requiredModule.Status === 'linking' || requiredModule.Status === 'linked' || requiredModule.Status === 'evaluating-async' || requiredModule.Status === 'evaluated');
+      CastType<number>(requiredModule.DFSAncestorIndex);
       Assert((requiredModule.Status === 'linking') === stack.includes(requiredModule));
       if (requiredModule.Status === 'linking') {
         module.DFSAncestorIndex = Math.min(module.DFSAncestorIndex, requiredModule.DFSAncestorIndex);
@@ -153,13 +159,13 @@ export function InnerModuleLinking(module, stack, index) {
 }
 
 /** https://tc39.es/ecma262/#sec-innermoduleevaluation */
-export function InnerModuleEvaluation(module, stack, index) {
+export function InnerModuleEvaluation(module: AbstractModuleRecord, stack: CyclicModuleRecord[], index: number): NormalCompletion<number> | ThrowCompletion {
   if (!(module instanceof CyclicModuleRecord)) {
     Q(module.Evaluate());
     return index;
   }
   if (module.Status === 'evaluating-async' || module.Status === 'evaluated') {
-    if (module.EvaluationError === Value.undefined) {
+    if (module.EvaluationError instanceof UndefinedValue) {
       return index;
     } else {
       return module.EvaluationError;
@@ -182,12 +188,14 @@ export function InnerModuleEvaluation(module, stack, index) {
     if (requiredModule instanceof CyclicModuleRecord) {
       Assert(requiredModule.Status === 'evaluating' || requiredModule.Status === 'evaluating-async' || requiredModule.Status === 'evaluated');
       Assert((requiredModule.Status === 'evaluating') === stack.includes(requiredModule));
+      CastType<number>(requiredModule.DFSAncestorIndex);
       if (requiredModule.Status === 'evaluating') {
         module.DFSAncestorIndex = Math.min(module.DFSAncestorIndex, requiredModule.DFSAncestorIndex);
       } else {
-        requiredModule = GetAsyncCycleRoot(requiredModule);
+        requiredModule = GetAsyncCycleRoot(requiredModule) satisfies CyclicModuleRecord;
+        CastType<CyclicModuleRecord>(requiredModule);
         Assert(requiredModule.Status === 'evaluating-async' || requiredModule.Status === 'evaluated');
-        if (requiredModule.EvaluationError !== Value.undefined) {
+        if (!(requiredModule.EvaluationError instanceof UndefinedValue)) {
           return module.EvaluationError;
         }
       }
@@ -225,7 +233,7 @@ export function InnerModuleEvaluation(module, stack, index) {
 }
 
 /** https://tc39.es/ecma262/#sec-execute-async-module */
-function ExecuteAsyncModule(module) {
+function ExecuteAsyncModule(module: CyclicModuleRecord): unused {
   // 1. Assert: module.[[Status]] is evaluating or evaluating-async.
   Assert(module.Status === 'evaluating' || module.Status === 'evaluating-async');
   // 2. Assert: module.[[Async]] is true.
@@ -257,16 +265,16 @@ function ExecuteAsyncModule(module) {
   // 10. Perform ! module.ExecuteModule(capability).
   X(module.ExecuteModule(capability));
   // 11. Return.
-  return Value.undefined;
+  return unused;
 }
 
-/** https://tc39.es/ecma262/#sec-getcycleroot */
-export function GetAsyncCycleRoot(module) {
+/** ??? */
+export function GetAsyncCycleRoot(module: CyclicModuleRecord): CyclicModuleRecord {
   Assert(module.Status === 'evaluated' || module.Status === 'evaluating-async');
   if (module.AsyncParentModules.length === 0) {
     return module;
   }
-  while (module.DFSIndex > module.DFSAncestorIndex) {
+  while (module.DFSIndex! > module.DFSAncestorIndex!) {
     Assert(module.AsyncParentModules.length > 0);
     const nextCycleModule = module.AsyncParentModules[0];
     Assert(nextCycleModule.DFSAncestorIndex === module.DFSAncestorIndex);
@@ -277,10 +285,10 @@ export function GetAsyncCycleRoot(module) {
 }
 
 /** https://tc39.es/ecma262/#sec-asyncmodulexecutionfulfilled */
-function AsyncModuleExecutionFulfilled(module) {
+function AsyncModuleExecutionFulfilled(module: CyclicModuleRecord): unused {
   if (module.Status === 'evaluated') {
     Assert(module.EvaluationError !== Value.undefined);
-    return Value.undefined;
+    return unused;
   }
   Assert(module.Status === 'evaluating-async');
   Assert(module.EvaluationError === Value.undefined);
@@ -294,12 +302,12 @@ function AsyncModuleExecutionFulfilled(module) {
       Assert(m.AsyncEvaluating === Value.true);
       const cycleRoot = X(GetAsyncCycleRoot(m));
       if (cycleRoot.EvaluationError !== Value.undefined) {
-        return Value.undefined;
+        return unused;
       }
       if (m.Async === Value.true) {
         X(ExecuteAsyncModule(m));
       } else {
-        const result = m.ExecuteModule();
+        const result = EnsureCompletion(m.ExecuteModule());
         if (result instanceof NormalCompletion) {
           X(AsyncModuleExecutionFulfilled(m));
         } else {
@@ -312,14 +320,14 @@ function AsyncModuleExecutionFulfilled(module) {
     Assert(module.DFSIndex === module.DFSAncestorIndex);
     X(Call(module.TopLevelCapability.Resolve, Value.undefined, [Value.undefined]));
   }
-  return Value.undefined;
+  return unused;
 }
 
 /** https://tc39.es/ecma262/#sec-AsyncModuleExecutionRejected */
-function AsyncModuleExecutionRejected(module, error) {
+function AsyncModuleExecutionRejected(module: CyclicModuleRecord, error: Value): unused {
   if (module.Status === 'evaluated') {
     Assert(module.EvaluationError !== Value.undefined);
-    return Value.undefined;
+    return unused;
   }
   Assert(module.Status === 'evaluating-async');
   Assert(module.EvaluationError === Value.undefined);
@@ -335,10 +343,10 @@ function AsyncModuleExecutionRejected(module, error) {
     Assert(module.DFSIndex === module.DFSAncestorIndex);
     X(Call(module.TopLevelCapability.Reject, Value.undefined, [error]));
   }
-  return Value.undefined;
+  return unused;
 }
 
-function getRecordWithSpecifier(loadedModules, specifier) {
+function getRecordWithSpecifier(loadedModules: readonly CyclicModuleRecordRequestedModule[], specifier: JSStringValue) {
   for (const record of loadedModules) {
     if (record.Specifier.stringValue() === specifier.stringValue()) {
       return record;
@@ -348,14 +356,14 @@ function getRecordWithSpecifier(loadedModules, specifier) {
 }
 
 /** https://tc39.es/ecma262/#sec-GetImportedModule */
-export function GetImportedModule(referrer, specifier) {
+export function GetImportedModule(referrer: CyclicModuleRecord, specifier: JSStringValue): AbstractModuleRecord {
   const record = getRecordWithSpecifier(referrer.LoadedModules, specifier);
   Assert(record !== undefined);
   return record.Module;
 }
 
 /** https://tc39.es/ecma262/#sec-FinishLoadingImportedModule */
-export function FinishLoadingImportedModule(referrer, specifier, result, state) {
+export function FinishLoadingImportedModule(referrer: ScriptRecord | Realm | CyclicModuleRecord, specifier: JSStringValue, result: NormalCompletion<AbstractModuleRecord> | ThrowCompletion, state: GraphLoadingState): unused {
   // 1. If result is a normal completion, then
   if (result.Type === 'normal') {
     // a. If referrer.[[LoadedModules]] contains a Record whose [[Specifier]] is specifier, then
@@ -383,7 +391,7 @@ export function FinishLoadingImportedModule(referrer, specifier, result, state) 
 }
 
 /** https://tc39.es/ecma262/#sec-getmodulenamespace */
-export function GetModuleNamespace(module) {
+export function GetModuleNamespace(module: AbstractModuleRecord): ModuleNamespaceExoticObject {
   // 1. Assert: If module is a Cyclic Module Record, then module.[[Status]] is not new or unlinked.
   if (module instanceof CyclicModuleRecord) {
     Assert(module.Status !== 'new' && module.Status !== 'unlinked');
@@ -412,7 +420,8 @@ export function GetModuleNamespace(module) {
   return namespace;
 }
 
-export function CreateSyntheticModule(exportNames, evaluationSteps, realm, hostDefined) {
+/** ??? */
+export function CreateSyntheticModule(exportNames: readonly JSStringValue[], evaluationSteps: (module: SyntheticModuleRecord) => NormalCompletion<void> | ThrowCompletion, realm: Realm, hostDefined: unknown) {
   // 1. Return Synthetic Module Record {
   //      [[Realm]]: realm,
   //      [[Environment]]: undefined,
@@ -431,10 +440,10 @@ export function CreateSyntheticModule(exportNames, evaluationSteps, realm, hostD
   });
 }
 
-/** https://tc39.es/ecma262/#sec-create-default-export-synthetic-module */
-export function CreateDefaultExportSyntheticModule(defaultExport, realm, hostDefined) {
+/** ??? */
+export function CreateDefaultExportSyntheticModule(defaultExport: Value, realm: Realm, hostDefined: unknown) {
   // 1. Let closure be the a Abstract Closure with parameters (module) that captures defaultExport and performs the following steps when called:
-  const closure = (module) => { // eslint-disable-line arrow-body-style
+  const closure = (module: SyntheticModuleRecord) => { // eslint-disable-line arrow-body-style
     // a. Return ? module.SetSyntheticExport("default", defaultExport).
     return Q(module.SetSyntheticExport(Value('default'), defaultExport));
   };

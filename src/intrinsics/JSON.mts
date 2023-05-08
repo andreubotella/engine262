@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   BooleanValue,
@@ -24,6 +23,7 @@ import {
   ToIntegerOrInfinity,
   ToNumber,
   ToString,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   isLeadingSurrogate,
@@ -36,7 +36,7 @@ import {
   NormalCompletion,
   Q, X,
 } from '../completion.mjs';
-import { ValueSet, kInternal } from '../helpers.mjs';
+import { ValueSet, isArray, kInternal } from '../helpers.mjs';
 import { BigIntValue, evaluateScript, F } from '../api.mjs';
 import { bootstrapPrototype } from './bootstrap.mjs';
 
@@ -82,7 +82,7 @@ class JSONValidator {
   }
 
   eat(c) {
-    if (Array.isArray(c) && c.includes(this.char)) {
+    if (isArray(c) && c.includes(this.char)) {
       X(this.advance());
       return true;
     } else if (this.char === c) {
@@ -541,7 +541,7 @@ function JSON_stringify([value = Value.undefined, replacer = Value.undefined, sp
   return Q(SerializeJSONProperty(state, Value(''), wrapper));
 }
 
-export function bootstrapJSON(realmRec) {
+export function bootstrapJSON(realmRec: Realm) {
   const json = bootstrapPrototype(realmRec, [
     ['parse', JSON_parse, 2],
     ['stringify', JSON_stringify, 3],

@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { RequireInternalSlot, WeakRefDeref } from '../abstract-ops/all.mjs';
+import { Realm, RequireInternalSlot, WeakRefDeref } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { bootstrapPrototype } from './bootstrap.mjs';
 
@@ -13,7 +12,7 @@ function WeakRefProto_deref(args, { thisValue }) {
   return X(WeakRefDeref(weakRef));
 }
 
-export function bootstrapWeakRefPrototype(realmRec) {
+export function bootstrapWeakRefPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['deref', WeakRefProto_deref, 0],
   ], realmRec.Intrinsics['%Object.prototype%'], 'WeakRef');

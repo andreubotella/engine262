@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Assert,
@@ -26,6 +25,7 @@ import {
   WeekDay,
   YearFromTime,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   JSStringValue,
@@ -657,7 +657,7 @@ function DateProto_toPrimitive([hint = Value.undefined], { thisValue }) {
   return Q(OrdinaryToPrimitive(O, tryFirst));
 }
 
-export function bootstrapDatePrototype(realmRec) {
+export function bootstrapDatePrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['getDate', DateProto_getDate, 0],
     ['getDay', DateProto_getDay, 0],

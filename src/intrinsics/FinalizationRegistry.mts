@@ -1,7 +1,6 @@
-// @ts-nocheck
 import { surroundingAgent, HostMakeJobCallback } from '../engine.mjs';
 import { Value } from '../value.mjs';
-import { IsCallable, OrdinaryCreateFromConstructor } from '../abstract-ops/all.mjs';
+import { IsCallable, OrdinaryCreateFromConstructor, Realm } from '../abstract-ops/all.mjs';
 import { Q } from '../completion.mjs';
 import { bootstrapConstructor } from './bootstrap.mjs';
 
@@ -33,7 +32,7 @@ function FinalizationRegistryConstructor([cleanupCallback = Value.undefined], { 
   return finalizationGroup;
 }
 
-export function bootstrapFinalizationRegistry(realmRec) {
+export function bootstrapFinalizationRegistry(realmRec: Realm) {
   const cons = bootstrapConstructor(
     realmRec,
     FinalizationRegistryConstructor,

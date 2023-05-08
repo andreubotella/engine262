@@ -1,8 +1,8 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   SameValue,
   RequireInternalSlot,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   ObjectValue,
@@ -87,7 +87,7 @@ function WeakSetProto_has([value = Value.undefined], { thisValue }) {
   return Value.false;
 }
 
-export function bootstrapWeakSetPrototype(realmRec) {
+export function bootstrapWeakSetPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['add', WeakSetProto_add, 1],
     ['delete', WeakSetProto_delete, 1],

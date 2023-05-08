@@ -1,9 +1,9 @@
-// @ts-nocheck
 import {
   IsIntegralNumber,
   OrdinaryCreateFromConstructor,
   ToNumeric,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import {
   Descriptor,
@@ -79,7 +79,7 @@ function Number_isSafeInteger([number = Value.undefined]) {
   return Value.false;
 }
 
-export function bootstrapNumber(realmRec) {
+export function bootstrapNumber(realmRec: Realm) {
   const override = {
     Writable: Value.false,
     Enumerable: Value.false,

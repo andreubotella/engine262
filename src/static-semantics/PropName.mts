@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function PropName(node) {
   switch (node.type) {
     case 'IdentifierName':

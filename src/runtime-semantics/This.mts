@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { ResolveThisBinding } from '../abstract-ops/all.mjs';
 import { Q } from '../completion.mjs';
 

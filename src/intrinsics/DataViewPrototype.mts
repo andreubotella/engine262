@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Assert,
   GetViewValue,
@@ -6,6 +5,7 @@ import {
   IsDetachedBuffer,
   RequireInternalSlot,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q } from '../completion.mjs';
 import { surroundingAgent } from '../engine.mjs';
@@ -238,7 +238,7 @@ function DataViewProto_setUint32([byteOffset = Value.undefined, value = Value.un
   return Q(SetViewValue(v, byteOffset, littleEndian, 'Uint32', value));
 }
 
-export function bootstrapDataViewPrototype(realmRec) {
+export function bootstrapDataViewPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['buffer', [DataViewProto_buffer]],
     ['byteLength', [DataViewProto_byteLength]],

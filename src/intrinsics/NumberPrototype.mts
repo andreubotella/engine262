@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   ObjectValue,
   Value,
@@ -9,6 +8,7 @@ import {
   ToIntegerOrInfinity,
   ToString,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { surroundingAgent } from '../engine.mjs';
 import { Q, X } from '../completion.mjs';
@@ -103,7 +103,7 @@ function NumberProto_valueOf(args, { thisValue }) {
   return Q(thisNumberValue(thisValue));
 }
 
-export function bootstrapNumberPrototype(realmRec) {
+export function bootstrapNumberPrototype(realmRec: Realm) {
   const proto = bootstrapPrototype(realmRec, [
     ['toExponential', NumberProto_toExponential, 1],
     ['toFixed', NumberProto_toFixed, 1],

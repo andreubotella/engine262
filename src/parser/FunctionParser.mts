@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { IsSimpleParameterList } from '../static-semantics/all.mjs';
 import { getDeclarations } from './Scope.mjs';
 import { Token } from './tokens.mjs';

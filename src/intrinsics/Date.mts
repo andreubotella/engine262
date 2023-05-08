@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   Assert,
   OrdinaryCreateFromConstructor,
@@ -12,6 +11,7 @@ import {
   UTC,
   TimeClip,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Value, JSStringValue, ObjectValue } from '../value.mjs';
 import {
@@ -195,7 +195,7 @@ function parseDate(dateTimeString) {
   return F(parsed);
 }
 
-export function bootstrapDate(realmRec) {
+export function bootstrapDate(realmRec: Realm) {
   const cons = bootstrapConstructor(realmRec, DateConstructor, 'Date', 7, realmRec.Intrinsics['%Date.prototype%'], [
     ['now', Date_now, 0],
     ['parse', Date_parse, 1],

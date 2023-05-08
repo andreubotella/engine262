@@ -1,0 +1,9 @@
+{
+    "NormalCompletion<$1> | ThrowCompletion": {
+        "prefix": "completion",
+        "body": [
+            "NormalCompletion<$1> | ThrowCompletion"
+        ],
+        "description": "Return type of an abstract operation that returns either a normal completion containing a T or a throw completion"
+    }
+}

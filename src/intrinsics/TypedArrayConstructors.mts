@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   ObjectValue, Value, wellKnownSymbols,
@@ -24,11 +23,12 @@ import {
   ToString,
   typedArrayInfoByName,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { bootstrapConstructor } from './bootstrap.mjs';
 
-export function bootstrapTypedArrayConstructors(realmRec) {
+export function bootstrapTypedArrayConstructors(realmRec: Realm) {
   Object.entries(typedArrayInfoByName).forEach(([TypedArray, info]) => {
     /** https://tc39.es/ecma262/#sec-typedarray-constructors */
     function TypedArrayConstructor(args, { NewTarget }) {

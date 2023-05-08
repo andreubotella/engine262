@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { surroundingAgent } from '../engine.mjs';
 import {
   Descriptor,
@@ -9,6 +8,7 @@ import {
   CreateBuiltinFunction,
   ToNumber,
   F,
+  Realm,
 } from '../abstract-ops/all.mjs';
 import { Q, X } from '../completion.mjs';
 import { bootstrapPrototype } from './bootstrap.mjs';
@@ -99,7 +99,7 @@ function Math_random() {
 }
 
 /** https://tc39.es/ecma262/#sec-math-object */
-export function bootstrapMath(realmRec) {
+export function bootstrapMath(realmRec: Realm) {
   /** https://tc39.es/ecma262/#sec-value-properties-of-the-math-object */
   const readonly = { Writable: Value.false, Configurable: Value.false };
   const valueProps = [
