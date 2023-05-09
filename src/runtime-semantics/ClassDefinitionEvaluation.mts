@@ -126,7 +126,7 @@ export function* ClassDefinitionEvaluation(ClassTail, classBinding, className) {
       // i. Let protoParent be ? Get(superclass, "prototype").
       protoParent = Q(Get(superclass, Value('prototype')));
       // ii. If Type(protoParent) is neither Object nor Null, throw a TypeError exception.
-      if (!(protoParent instanceof ObjectValue) && !(protoParent instanceof NullValue)) {
+      if (!(protoParent instanceof ObjectValue) && !(protoParent === Value.null)) {
         return surroundingAgent.Throw('TypeError', 'ObjectPrototypeType');
       }
       // iii. Let constructorParent be superclass.

@@ -88,7 +88,7 @@ function Object_assign([target = Value.undefined, ...sources]) {
 /** https://tc39.es/ecma262/#sec-object.create */
 function Object_create([O = Value.undefined, Properties = Value.undefined]) {
   // 1. If Type(O) is neither Object nor Null, throw a TypeError exception.
-  if (!(O instanceof ObjectValue) && !(O instanceof NullValue)) {
+  if (!(O instanceof ObjectValue) && !(O === Value.null)) {
     return surroundingAgent.Throw('TypeError', 'ObjectPrototypeType');
   }
   // 2. Let obj be OrdinaryObjectCreate(O).
@@ -379,7 +379,7 @@ function Object_setPrototypeOf([O = Value.undefined, proto = Value.undefined]) {
   // 1. Set O to ? RequireObjectCoercible(O).
   O = Q(RequireObjectCoercible(O));
   // 2. If Type(proto) is neither Object nor Null, throw a TypeError exception.
-  if (!(proto instanceof ObjectValue) && !(proto instanceof NullValue)) {
+  if (!(proto instanceof ObjectValue) && !(proto === Value.null)) {
     return surroundingAgent.Throw('TypeError', 'ObjectPrototypeType');
   }
   // 3. If Type(O) is not Object, return O.

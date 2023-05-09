@@ -4,7 +4,7 @@ import {
 import { surroundingAgent } from '../engine.mjs';
 import { CastType } from '../helpers.mjs';
 import {
-  BigIntValue, NumberValue, Value, type WithPrototype, BooleanValue,
+  BigIntValue, NumberValue, Value, type WithPrototype, type BooleanValue, ObjectValue,
 } from '../value.mjs';
 import {
   Assert,
@@ -35,6 +35,7 @@ export interface DataViewObject extends WithPrototype {
 export function GetViewValue(view: Value, requestIndex: Value, isLittleEndian: Value, type: TypedArrayElementType): NormalCompletion<NumberValue | BigIntValue> | ThrowCompletion {
   // 1. Perform ? RequireInternalSlot(view, [[DataView]]).
   Q(RequireInternalSlot(view, 'DataView'));
+  CastType<ObjectValue>(view);
   // 2. Assert: view has a [[ViewedArrayBuffer]] internal slot.
   Assert('ViewedArrayBuffer' in view);
   CastType<DataViewObject>(view);
@@ -69,6 +70,7 @@ export function GetViewValue(view: Value, requestIndex: Value, isLittleEndian: V
 export function SetViewValue(view: Value, requestIndex: Value, isLittleEndian: Value, type: TypedArrayElementType, value: Value): NormalCompletion<undefined> | ThrowCompletion {
   // 1. Perform ? RequireInternalSlot(view, [[DataView]]).
   Q(RequireInternalSlot(view, 'DataView'));
+  CastType<ObjectValue>(view);
   // 2. Assert: view has a [[ViewedArrayBuffer]] internal slot.
   Assert('ViewedArrayBuffer' in view);
   CastType<DataViewObject>(view);
@@ -103,5 +105,6 @@ export function SetViewValue(view: Value, requestIndex: Value, isLittleEndian: V
   // 13. Let bufferIndex be getIndex + viewOffset.
   const bufferIndex = getIndex + viewOffset;
   // 14. Return SetValueInBuffer(buffer, bufferIndex, type, numberValue, false, Unordered, isLittleEndian).
-  return SetValueInBuffer(buffer, bufferIndex, type, numberValue, Value.false, 'Unordered', isLittleEndian);
+  SetValueInBuffer(buffer, bufferIndex, type, numberValue, Value.false, 'Unordered', isLittleEndian);
+  return
 }

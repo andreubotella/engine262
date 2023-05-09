@@ -179,11 +179,11 @@ export function SameValueNonNumber(x: Value, y: Value): BooleanValue {
   Assert(!(x instanceof NumberValue));
   Assert(Type(x) === Type(y));
 
-  if (x instanceof UndefinedValue) {
+  if (x === Value.undefined) {
     return Value.true;
   }
 
-  if (x instanceof NullValue) {
+  if (x === Value.null) {
     return Value.true;
   }
 
@@ -194,7 +194,7 @@ export function SameValueNonNumber(x: Value, y: Value): BooleanValue {
     return Value.false;
   }
 
-  if (x instanceof BooleanValue) {
+  if (Value.isBoolean(x)) {
     if (x === y) {
       return Value.true;
     }
@@ -346,11 +346,11 @@ export function AbstractEqualityComparison(x: Value, y: Value): NormalCompletion
     return AbstractEqualityComparison(y, x);
   }
   // 8. If Type(x) is Boolean, return the result of the comparison ! ToNumber(x) == y.
-  if (x instanceof BooleanValue) {
+  if (Value.isBoolean(x)) {
     return AbstractEqualityComparison(X(ToNumber(x)), y);
   }
   // 9. If Type(y) is Boolean, return the result of the comparison x == ! ToNumber(y).
-  if (y instanceof BooleanValue) {
+  if (Value.isBoolean(y)) {
     return AbstractEqualityComparison(x, X(ToNumber(y)));
   }
   // 10. If Type(x) is either String, Number, BigInt, or Symbol and Type(y) is Object, return the result of the comparison x == ToPrimitive(y).

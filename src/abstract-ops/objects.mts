@@ -37,7 +37,7 @@ export function OrdinaryGetPrototypeOf(O: OrdinaryObject): ObjectValue | NullVal
 
 // 9.1.2.1 OrdinarySetPrototypeOf
 export function OrdinarySetPrototypeOf(O: OrdinaryObject, V: ObjectValue | NullValue): BooleanValue {
-  Assert(V instanceof ObjectValue || V instanceof NullValue);
+  Assert(V instanceof ObjectValue || V === Value.null);
 
   const current = O.Prototype;
   if (SameValue(V, current) === Value.true) {
@@ -50,7 +50,7 @@ export function OrdinarySetPrototypeOf(O: OrdinaryObject, V: ObjectValue | NullV
   let p = V;
   let done = false;
   while (done === false) {
-    if (p instanceof NullValue) {
+    if (p === Value.null) {
       done = true;
     } else if (SameValue(p, O) === Value.true) {
       return Value.false;
@@ -117,7 +117,7 @@ export function IsCompatiblePropertyDescriptor(Extensible: BooleanValue, Desc: D
 export function ValidateAndApplyPropertyDescriptor(O: OrdinaryObject | UndefinedValue, P: PropertyKeyValue, extensible: BooleanValue, Desc: Descriptor, current: Descriptor | UndefinedValue): BooleanValue {
   Assert(O === Value.undefined || IsPropertyKey(P));
 
-  if (current instanceof UndefinedValue) {
+  if (current === Value.undefined) {
     if (extensible === Value.false) {
       return Value.false;
     }
@@ -125,7 +125,7 @@ export function ValidateAndApplyPropertyDescriptor(O: OrdinaryObject | Undefined
     Assert(extensible === Value.true);
 
     if (IsGenericDescriptor(Desc) || IsDataDescriptor(Desc)) {
-      if (!(O instanceof UndefinedValue)) {
+      if (!(O === Value.undefined)) {
         O.properties.set(P, Descriptor({
           Value: Desc.Value === undefined ? Value.undefined : Desc.Value,
           Writable: Desc.Writable === undefined ? Value.false : Desc.Writable,
@@ -135,7 +135,7 @@ export function ValidateAndApplyPropertyDescriptor(O: OrdinaryObject | Undefined
       }
     } else {
       Assert(IsAccessorDescriptor(Desc));
-      if (!(O instanceof UndefinedValue)) {
+      if (!(O === Value.undefined)) {
         O.properties.set(P, Descriptor({
           Get: Desc.Get === undefined ? Value.undefined : Desc.Get,
           Set: Desc.Set === undefined ? Value.undefined : Desc.Set,
@@ -169,7 +169,7 @@ export function ValidateAndApplyPropertyDescriptor(O: OrdinaryObject | Undefined
       return Value.false;
     }
     if (IsDataDescriptor(current)) {
-      if (!(O instanceof UndefinedValue)) {
+      if (!(O === Value.undefined)) {
         const entry = O.properties.get(P);
         entry.Value = undefined;
         entry.Writable = undefined;
@@ -177,7 +177,7 @@ export function ValidateAndApplyPropertyDescriptor(O: OrdinaryObject | Undefined
         entry.Set = Value.undefined;
       }
     } else {
-      if (!(O instanceof UndefinedValue)) {
+      if (!(O === Value.undefined)) {
         const entry = O.properties.get(P);
         entry.Get = undefined;
         entry.Set = undefined;
@@ -208,7 +208,7 @@ export function ValidateAndApplyPropertyDescriptor(O: OrdinaryObject | Undefined
     }
   }
 
-  if (!(O instanceof UndefinedValue)) {
+  if (!(O === Value.undefined)) {
     const target = O.properties.get(P);
     if (Desc.Value !== undefined) {
       target.Value = Desc.Value;
@@ -238,11 +238,11 @@ export function OrdinaryHasProperty(O: OrdinaryObject, P: PropertyKeyValue): Nor
   Assert(IsPropertyKey(P));
 
   const hasOwn = Q(O.GetOwnProperty(P));
-  if (!(hasOwn instanceof UndefinedValue)) {
+  if (!(hasOwn === Value.undefined)) {
     return Value.true;
   }
   const parent = Q(O.GetPrototypeOf());
-  if (!(parent instanceof NullValue)) {
+  if (!(parent === Value.null)) {
     return Q(parent.HasProperty(P));
   }
   return Value.false;
@@ -253,9 +253,9 @@ export function OrdinaryGet(O: OrdinaryObject, P: PropertyKeyValue, Receiver: Va
   Assert(IsPropertyKey(P));
 
   const desc = Q(O.GetOwnProperty(P));
-  if (desc instanceof UndefinedValue) {
+  if (desc === Value.undefined) {
     const parent = Q(O.GetPrototypeOf());
-    if (parent instanceof NullValue) {
+    if (parent === Value.null) {
       return Value.undefined;
     }
     return Q(parent.Get(P, Receiver));
@@ -265,7 +265,7 @@ export function OrdinaryGet(O: OrdinaryObject, P: PropertyKeyValue, Receiver: Va
   }
   Assert(IsAccessorDescriptor(desc));
   const getter = desc.Get;
-  if (getter instanceof UndefinedValue) {
+  if (getter === Value.undefined) {
     return Value.undefined;
   }
   return Q(Call(getter, Receiver));
@@ -282,9 +282,9 @@ export function OrdinarySet(O: OrdinaryObject, P: PropertyKeyValue, V: Value, Re
 export function OrdinarySetWithOwnDescriptor(O: OrdinaryObject, P: PropertyKeyValue, V: Value, Receiver: Value, ownDesc: Descriptor | UndefinedValue): NormalCompletion<BooleanValue> | ThrowCompletion {
   Assert(IsPropertyKey(P));
 
-  if (ownDesc instanceof UndefinedValue) {
+  if (ownDesc === Value.undefined) {
     const parent = Q(O.GetPrototypeOf());
-    if (!(parent instanceof NullValue)) {
+    if (!(parent === Value.null)) {
       return Q(parent.Set(P, V, Receiver));
     }
     ownDesc = Descriptor({
@@ -304,7 +304,7 @@ export function OrdinarySetWithOwnDescriptor(O: OrdinaryObject, P: PropertyKeyVa
     }
 
     const existingDescriptor = Q(Receiver.GetOwnProperty(P));
-    if (!(existingDescriptor instanceof UndefinedValue)) {
+    if (!(existingDescriptor === Value.undefined)) {
       if (IsAccessorDescriptor(existingDescriptor)) {
         return Value.false;
       }
@@ -319,7 +319,7 @@ export function OrdinarySetWithOwnDescriptor(O: OrdinaryObject, P: PropertyKeyVa
 
   Assert(IsAccessorDescriptor(ownDesc));
   const setter = ownDesc.Set;
-  if (setter === undefined || setter instanceof UndefinedValue) {
+  if (setter === undefined || setter === Value.undefined) {
     return Value.false;
   }
   Q(Call(setter, Receiver, [V]));
@@ -330,7 +330,7 @@ export function OrdinarySetWithOwnDescriptor(O: OrdinaryObject, P: PropertyKeyVa
 export function OrdinaryDelete(O: OrdinaryObject, P: PropertyKeyValue): NormalCompletion<BooleanValue> | ThrowCompletion {
   Assert(IsPropertyKey(P));
   const desc = Q(O.GetOwnProperty(P));
-  if (desc instanceof UndefinedValue) {
+  if (desc === Value.undefined) {
     return Value.true;
   }
   if (desc.Configurable === Value.true) {

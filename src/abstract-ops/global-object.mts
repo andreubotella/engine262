@@ -95,7 +95,7 @@ export function PerformEval(x: Value, callerRealm: Realm, strictCaller: boolean,
   //   h. If inClassFieldInitializer is true, and ContainsArguments of body is true, throw a SyntaxError exception.
   const privateIdentifiers: string[] = [];
   let pointer = direct ? surroundingAgent.runningExecutionContext.PrivateEnvironment : Value.null;
-  while (!(pointer instanceof NullValue)) {
+  while (!(pointer === Value.null)) {
     for (const binding of pointer.Names) {
       privateIdentifiers.push(binding.Description.stringValue());
     }
@@ -242,7 +242,7 @@ function EvalDeclarationInstantiation(body, varEnv: EnvironmentRecord, lexEnv: D
   // 5. Let pointer be privateEnv.
   let pointer = privateEnv;
   // 6. Repeat, while pointer is not null,
-  while (!(pointer instanceof NullValue)) {
+  while (!(pointer === Value.null)) {
     // a. For each Private Name binding of pointer.[[Names]], do
     for (const binding of pointer.Names) {
       // i. If privateIdentifiers does not contain binding.[[Description]], append binding.[[Description]] to privateIdentifiers.

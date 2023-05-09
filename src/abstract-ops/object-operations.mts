@@ -81,7 +81,7 @@ export function GetV(V, P) {
 export function Set(O: ObjectValue, P: PropertyKeyValue, V: Value, Throw: BooleanValue): NormalCompletionObject<void> | ThrowCompletion {
   Assert(O instanceof ObjectValue);
   Assert(IsPropertyKey(P));
-  Assert(Throw instanceof BooleanValue);
+  Assert(Value.isBoolean(Throw));
   const success = Q(O.Set(P, V, O));
   if (success === Value.false && Throw === Value.true) {
     return surroundingAgent.Throw('TypeError', 'CannotSetProperty', P, O);
@@ -178,7 +178,7 @@ export function GetMethod(V, P) {
 }
 
 /** https://tc39.es/ecma262/#sec-hasproperty */
-export function HasProperty(O, P) {
+export function HasProperty(O: ObjectValue, P: PropertyKeyValue): NormalCompletion<BooleanValue> | ThrowCompletion {
   Assert(O instanceof ObjectValue);
   Assert(IsPropertyKey(P));
   return Q(O.HasProperty(P));

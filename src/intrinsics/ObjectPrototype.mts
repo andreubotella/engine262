@@ -67,7 +67,7 @@ function ObjectProto_propertyIsEnumerable([V = Value.undefined], { thisValue }) 
   // 3. Let desc be ? O.[[GetOwnProperty]](P).
   const desc = Q(O.GetOwnProperty(P));
   // 4. If desc is undefined, return false.
-  if (desc instanceof UndefinedValue) {
+  if (desc === Value.undefined) {
     return Value.false;
   }
   // 5. Return desc.[[Enumerable]].
@@ -248,7 +248,7 @@ function ObjectProto__proto__Set([proto = Value.undefined], { thisValue }) {
   // 1. Let O be ? RequireObjectCoercible(this value).
   const O = Q(RequireObjectCoercible(thisValue));
   // 2. If Type(proto) is neither Object nor Null, return undefined.
-  if (!(proto instanceof ObjectValue) && !(proto instanceof NullValue)) {
+  if (!(proto instanceof ObjectValue) && !(proto === Value.null)) {
     return Value.undefined;
   }
   // 3. If Type(O) is not Object, return undefined.

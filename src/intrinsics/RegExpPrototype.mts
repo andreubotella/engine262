@@ -60,7 +60,7 @@ export function RegExpExec(R, S) {
   const exec = Q(Get(R, Value('exec')));
   if (IsCallable(exec) === Value.true) {
     const result = Q(Call(exec, R, [S]));
-    if (!(result instanceof ObjectValue) && !(result instanceof NullValue)) {
+    if (!(result instanceof ObjectValue) && !(result === Value.null)) {
       return surroundingAgent.Throw('TypeError', 'RegExpExecNotObject', result);
     }
     return result;
@@ -248,7 +248,7 @@ export function AdvanceStringIndex(S, index, unicode) {
   // 2. Assert: index is a non-negative integer which is ≤ 2 ** (53 - 1).
   Assert(isNonNegativeInteger(index) && index <= (2 ** 53) - 1);
   // 3. Assert: Type(unicode) is Boolean.
-  Assert(unicode instanceof BooleanValue);
+  Assert(Value.isBoolean(unicode));
   // 4. If unicode is false, return index + 1.
   if (unicode === Value.false) {
     return index + 1;

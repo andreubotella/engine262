@@ -89,11 +89,11 @@ function* Evaluate_UnaryExpression_Typeof({ UnaryExpression }) {
   // 3. Set val to ? GetValue(val).
   val = Q(GetValue(val));
   // 4. Return a String according to Table 37.
-  if (val instanceof UndefinedValue) {
+  if (val === Value.undefined) {
     return new JSStringValue('undefined');
-  } else if (val instanceof NullValue) {
+  } else if (val === Value.null) {
     return new JSStringValue('object');
-  } else if (val instanceof BooleanValue) {
+  } else if (Value.isBoolean(val)) {
     return new JSStringValue('boolean');
   } else if (val instanceof NumberValue) {
     return new JSStringValue('number');

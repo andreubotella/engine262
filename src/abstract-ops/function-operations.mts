@@ -6,15 +6,16 @@ import {
   Descriptor,
   SymbolValue,
   ObjectValue,
-  UndefinedValue,
+  type UndefinedValue,
   Value,
   PrivateName,
-  BooleanValue,
+  type BooleanValue,
   JSStringValue,
-  NullValue,
+  type NullValue,
   type PropertyKeyValue,
   type WithPrototype,
   type WithExtensible,
+  ValueClass,
 } from '../value.mjs';
 import {
   EnsureCompletion,
@@ -109,17 +110,17 @@ export type ConstructorObject = FunctionObject;
 /** https://tc39.es/ecma262/#sec-tail-position-calls */
 
 export function isECMAScriptFunctionObject(O: Value): O is ECMAScriptFunctionObject {
-  return 'ECMAScriptCode' in O;
+  return 'ECMAScriptCode' in (O as ValueClass);
 }
 
 export function isFunctionObject(O: Value): O is FunctionObject {
-  return 'Call' in O;
+  return 'Call' in (O as ValueClass);
 }
 
 /** https://tc39.es/ecma262/#sec-prepareforordinarycall */
 export function PrepareForOrdinaryCall(F: FunctionObject, newTarget: ObjectValue | UndefinedValue): ExecutionContext {
   // 1. Assert: Type(newTarget) is Undefined or Object.
-  Assert(newTarget instanceof UndefinedValue || newTarget instanceof ObjectValue);
+  Assert(newTarget === Value.undefined || newTarget instanceof ObjectValue);
   // 2. Let callerContext be the running execution context.
   // const callerContext = surroundingAgent.runningExecutionContext;
   // 3. Let calleeContext be a new ECMAScript code execution context.
@@ -575,7 +576,7 @@ export function CreateBuiltinFunction(steps: NativeFunction | NativeConstructor,
   Assert(realm instanceof Realm);
   // 4. If prototype is not present, set prototype to realm.[[Intrinsics]].[[%Function.prototype%]].
   if (prototype === undefined) {
-    prototype = realm.Intrinsics['%Function.prototype%'];
+    prototype = realm.Intrinsics['%Function.prototype%'] as ObjectValue;
   }
   // 5. Let func be a new built-in function object that when called performs the action described by steps. The new function object has internal slots whose names are the elements of internalSlotsList.
   const func = X(MakeBasicObject(['Prototype', 'Extensible', 'Realm', 'ScriptOrModule', 'InitialName'].concat(internalSlotsList))) as Mutable<BuiltinFunctionObject>;

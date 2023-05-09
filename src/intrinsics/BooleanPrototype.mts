@@ -12,13 +12,13 @@ import { bootstrapPrototype } from './bootstrap.mjs';
 
 
 function thisBooleanValue(value) {
-  if (value instanceof BooleanValue) {
+  if (Value.isBoolean(value)) {
     return value;
   }
 
   if (value instanceof ObjectValue && 'BooleanData' in value) {
     const b = value.BooleanData;
-    Assert(b instanceof BooleanValue);
+    Assert(Value.isBoolean(b));
     return b;
   }
 

@@ -165,7 +165,7 @@ export function InnerModuleEvaluation(module: AbstractModuleRecord, stack: Cycli
     return index;
   }
   if (module.Status === 'evaluating-async' || module.Status === 'evaluated') {
-    if (module.EvaluationError instanceof UndefinedValue) {
+    if (module.EvaluationError === Value.undefined) {
       return index;
     } else {
       return module.EvaluationError;
@@ -195,7 +195,7 @@ export function InnerModuleEvaluation(module: AbstractModuleRecord, stack: Cycli
         requiredModule = GetAsyncCycleRoot(requiredModule) satisfies CyclicModuleRecord;
         CastType<CyclicModuleRecord>(requiredModule);
         Assert(requiredModule.Status === 'evaluating-async' || requiredModule.Status === 'evaluated');
-        if (!(requiredModule.EvaluationError instanceof UndefinedValue)) {
+        if (!(requiredModule.EvaluationError === Value.undefined)) {
           return module.EvaluationError;
         }
       }

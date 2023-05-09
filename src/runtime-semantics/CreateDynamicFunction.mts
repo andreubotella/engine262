@@ -40,7 +40,7 @@ export function CreateDynamicFunction(constructor, newTarget, kind, args) {
   // 5. Perform ? HostEnsureCanCompileStrings(callerRealm, calleeRealm).
   Q(HostEnsureCanCompileStrings(callerRealm, calleeRealm));
   // 6. If newTarget is undefined, set newTarget to constructor.
-  if (newTarget instanceof UndefinedValue) {
+  if (newTarget === Value.undefined) {
     newTarget = constructor;
   }
   // 7. If kind is normal, then

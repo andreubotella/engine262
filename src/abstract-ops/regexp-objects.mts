@@ -235,7 +235,7 @@ export function MakeMatchIndicesIndexPairArray(S: JSStringValue, indices: Readon
   Assert(isArray(groupNames) && groupNames.length === n - 1);
   // 6. NOTE: The groupNames List contains elements aligned with the indices List starting at indices[1].
   // 7. Assert: Type(hasGroups) is Boolean.
-  Assert(hasGroups instanceof BooleanValue);
+  Assert(Value.isBoolean(hasGroups));
   // 8. Set A to ! ArrayCreate(n).
   // 9. Assert: The value of A's "length" property is n.
   const A = X(ArrayCreate(n));

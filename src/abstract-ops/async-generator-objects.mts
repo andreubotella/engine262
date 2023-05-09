@@ -11,7 +11,7 @@ import {
 } from '../completion.mjs';
 import { Evaluate } from '../evaluator.mjs';
 import {
-  BooleanValue, JSStringValue, ObjectValue, UndefinedValue, Value,
+  type BooleanValue, JSStringValue, ObjectValue, type UndefinedValue, Value,
 } from '../value.mjs';
 import {
   resume, handleInResume, CastType, type Mutable,
@@ -221,7 +221,7 @@ export function* AsyncGeneratorYield(value: Value) {
   // 1. Let genContext be the running execution context.
   const genContext = surroundingAgent.runningExecutionContext;
   // 2. Assert: genContext is the execution context of a generator.
-  Assert(!(genContext.Generator instanceof UndefinedValue));
+  Assert(!(genContext.Generator === Value.undefined));
   // 3. Let generator be the value of the Generator component of genContext.
   const generator = genContext.Generator;
   // 4. Assert: GetGeneratorKind() is async.

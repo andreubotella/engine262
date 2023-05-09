@@ -37,7 +37,7 @@ export function PrivateGet(P: PrivateName, O: ObjectValue): NormalCompletion | T
   // 4. Assert: entry.[[Kind]] is accessor.
   Assert(entry.Kind === 'accessor');
   // 5. If entry.[[Get]] is undefined, throw a TypeError exception.
-  if (entry.Get instanceof UndefinedValue) {
+  if (entry.Get === Value.undefined) {
     return surroundingAgent.Throw('TypeError', 'PrivateNameNoGetter', P);
   }
   // 6. Let getter be entry.[[Get]].
@@ -64,7 +64,7 @@ export function PrivateSet(P: PrivateName, O: ObjectValue, value: Value): unused
     // a. Assert: entry.[[Kind]] is accessor.
     Assert(entry.Kind === 'accessor');
     // b. If entry.[[Set]] is undefined, throw a TypeError exception.
-    if (entry.Set instanceof UndefinedValue) {
+    if (entry.Set === Value.undefined) {
       return surroundingAgent.Throw('TypeError', 'PrivateNameNoSetter', P);
     }
     // c. Let setter be entry.[[Set]].

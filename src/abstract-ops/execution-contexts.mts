@@ -8,7 +8,7 @@ import {
 import type { AbstractModuleRecord } from '../modules.mjs';
 import type { ScriptRecord } from '../parse.mjs';
 import {
-  JSStringValue, NullValue, ObjectValue, ReferenceRecord, UndefinedValue, Value,
+  JSStringValue, type NullValue, ObjectValue, ReferenceRecord, type UndefinedValue, Value,
 } from '../value.mjs';
 import { Assert } from './all.mjs';
 
@@ -55,7 +55,7 @@ export function GetThisEnvironment(): EnvironmentRecord {
     // c. Let outer be env.[[OuterEnv]].
     const outer = env.OuterEnv;
     // d. Assert: outer is not null.
-    Assert(!(outer instanceof NullValue));
+    Assert(!(outer === Value.null));
     // e. Set env to outer.
     env = outer;
   }

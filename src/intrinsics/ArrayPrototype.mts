@@ -148,7 +148,7 @@ function ArrayProto_fill([value = Value.undefined, start = Value.undefined, end 
     k = Math.min(relativeStart, len);
   }
   let relativeEnd;
-  if (end instanceof UndefinedValue) {
+  if (end === Value.undefined) {
     relativeEnd = len;
   } else {
     relativeEnd = Q(ToIntegerOrInfinity(end));
@@ -358,7 +358,7 @@ function ArrayProto_slice([start = Value.undefined, end = Value.undefined], { th
     k = Math.min(relativeStart, len);
   }
   let relativeEnd;
-  if (end instanceof UndefinedValue) {
+  if (end === Value.undefined) {
     relativeEnd = len;
   } else {
     relativeEnd = Q(ToIntegerOrInfinity(end));

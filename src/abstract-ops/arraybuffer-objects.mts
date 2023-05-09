@@ -1,6 +1,6 @@
 import { surroundingAgent } from '../engine.mjs';
 import {
-  NumberValue, BigIntValue, BooleanValue, ObjectValue, Value, DataBlock, NullValue, SharedDataBlock,
+  NumberValue, BigIntValue, type BooleanValue, ObjectValue, Value, DataBlock, type NullValue, SharedDataBlock,
 } from '../value.mjs';
 import {
   Q, X, NormalCompletion, ThrowCompletion, unused,
@@ -167,7 +167,7 @@ const float64NaNBE = Object.freeze([127, 248, 0, 0, 0, 0, 0, 0]);
 
 /** https://tc39.es/ecma262/#sec-numerictorawbytes */
 export function NumericToRawBytes(type: TypedArrayElementType, value: NumberValue | BigIntValue, isLittleEndian: BooleanValue): number[] {
-  Assert(isLittleEndian instanceof BooleanValue);
+  Assert(Value.isBoolean(isLittleEndian));
   const isLittleEndianB = isLittleEndian === Value.true;
   let rawBytes;
   // One day, we will write our own IEEE 754 and two's complement encoder…

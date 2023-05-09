@@ -176,7 +176,7 @@ export abstract class CyclicModuleRecord extends AbstractModuleRecord {
       module = GetAsyncCycleRoot(module);
     }
     // (*TopLevelAwait) 4. If module.[[TopLevelCapability]] is not undefined, then
-    if (!(module.TopLevelCapability instanceof UndefinedValue)) {
+    if (!(module.TopLevelCapability === Value.undefined)) {
       // a. Return module.[[TopLevelCapability]].[[Promise]].
       return module.TopLevelCapability.Promise;
     }

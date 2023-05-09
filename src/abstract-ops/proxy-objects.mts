@@ -56,7 +56,7 @@ function ProxyGetPrototypeOf(this: ProxyExoticObject) {
     return Q(target.GetPrototypeOf());
   }
   const handlerProto = Q(Call(trap, handler, [target]));
-  if (!(handlerProto instanceof ObjectValue) && !(handlerProto instanceof NullValue)) {
+  if (!(handlerProto instanceof ObjectValue) && !(handlerProto === Value.null)) {
     return surroundingAgent.Throw('TypeError', 'ProxyGetPrototypeOfInvalid');
   }
   const extensibleTarget = Q(IsExtensible(target));
@@ -74,7 +74,7 @@ function ProxyGetPrototypeOf(this: ProxyExoticObject) {
 function ProxySetPrototypeOf(this: ProxyExoticObject, V) {
   const O = this;
 
-  Assert(V instanceof ObjectValue || V instanceof NullValue);
+  Assert(V instanceof ObjectValue || V === Value.null);
   const handler = O.ProxyHandler;
   if (handler === Value.null) {
     return surroundingAgent.Throw('TypeError', 'ProxyRevoked', 'setPrototypeOf');
@@ -172,7 +172,7 @@ function ProxyGetOwnProperty(this: ProxyExoticObject, P) {
   // 8. Let trapResultObj be ? Call(trap, handler, « target, P »).
   const trapResultObj = Q(Call(trap, handler, [target, P]));
   // 9. If Type(trapResultObj) is neither Object nor Undefined, throw a TypeError exception.
-  if (!(trapResultObj instanceof ObjectValue) && !(trapResultObj instanceof UndefinedValue)) {
+  if (!(trapResultObj instanceof ObjectValue) && !(trapResultObj === Value.undefined)) {
     return surroundingAgent.Throw('TypeError', 'ProxyGetOwnPropertyDescriptorInvalid', P);
   }
   // 10. Let targetDesc be ? target.[[GetOwnProperty]](P).
@@ -477,7 +477,7 @@ function ProxyOwnPropertyKeys(this: ProxyExoticObject) {
   const targetNonconfigurableKeys = [];
   for (const key of targetKeys) {
     const desc = Q(target.GetOwnProperty(key));
-    if (!(desc instanceof UndefinedValue) && desc.Configurable === Value.false) {
+    if (!(desc === Value.undefined) && desc.Configurable === Value.false) {
       targetNonconfigurableKeys.push(key);
     } else {
       targetConfigurableKeys.push(key);

@@ -25,7 +25,7 @@ export function GetSubstitution(matched, str, position, captures, namedCaptures,
   // 6. Assert: position ≤ stringLength.
   Assert(position <= stringLength);
   // 7. Assert: captures is a possibly empty List of Strings.
-  Assert(isArray(captures) && captures.every((value) => value instanceof JSStringValue || value instanceof UndefinedValue));
+  Assert(isArray(captures) && captures.every((value) => value instanceof JSStringValue || value === Value.undefined));
   // 8. Assert: Type(replacement) is String.
   Assert(replacement instanceof JSStringValue);
   // 9. Let tailPos be position + matchLength.

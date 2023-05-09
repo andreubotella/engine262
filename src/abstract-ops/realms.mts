@@ -275,11 +275,11 @@ export function CreateIntrinsics(realmRec: Realm): unused {
 /** https://tc39.es/ecma262/#sec-setrealmglobalobject */
 export function SetRealmGlobalObject(realmRec: Realm, globalObj: ObjectValue | UndefinedValue, thisValue: ObjectValue | UndefinedValue): unused {
   const intrinsics = realmRec.Intrinsics;
-  if (globalObj instanceof UndefinedValue) {
+  if (globalObj === Value.undefined) {
     globalObj = OrdinaryObjectCreate(intrinsics['%Object.prototype%']);
   }
   CastType<ObjectValue>(globalObj);
-  if (thisValue instanceof UndefinedValue) {
+  if (thisValue === Value.undefined) {
     thisValue = globalObj;
   }
   CastType<ObjectValue>(thisValue);

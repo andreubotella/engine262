@@ -23,9 +23,9 @@ export function CreateRegExpStringIterator(R, S, global, fullUnicode) {
   // 1. Assert: Type(S) is String.
   Assert(S instanceof JSStringValue);
   // 2. Assert: Type(global) is Boolean.
-  Assert(global instanceof BooleanValue);
+  Assert(Value.isBoolean(global));
   // 3. Assert: Type(fullUnicode) is Boolean.
-  Assert(fullUnicode instanceof BooleanValue);
+  Assert(Value.isBoolean(fullUnicode));
   // 4. Let closure be a new Abstract Closure with no parameters that captures R, S, global, and fullUnicode and performs the following steps when called:
   const closure = function* closure() {
     // a. Repeat,

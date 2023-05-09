@@ -195,7 +195,7 @@ export class CallSite {
   }
 
   isAsync() {
-    if (!(this.context.Function instanceof NullValue) && this.context.Function.ECMAScriptCode) {
+    if (!(this.context.Function === Value.null) && this.context.Function.ECMAScriptCode) {
       const code = this.context.Function.ECMAScriptCode;
       return code.type === 'AsyncFunctionBody' || code.type === 'AsyncGeneratorBody';
     }
@@ -207,7 +207,7 @@ export class CallSite {
   }
 
   getFunctionName() {
-    if (!(this.context.Function instanceof NullValue)) {
+    if (!(this.context.Function === Value.null)) {
       const name = this.context.Function.properties.get(Value('name'));
       if (name) {
         return X(ToString(name.Value)).stringValue();
@@ -217,7 +217,7 @@ export class CallSite {
   }
 
   getSpecifier() {
-    if (!(this.context.Function instanceof NullValue)) {
+    if (!(this.context.Function === Value.null)) {
       return this.context.ScriptOrModule.HostDefined.specifier;
     }
     return null;

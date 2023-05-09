@@ -1,4 +1,4 @@
-import { JSStringValue, UndefinedValue, Value } from '../value.mjs';
+import { JSStringValue, Value } from '../value.mjs';
 import { X } from '../completion.mjs';
 import { CanonicalNumericIndexString } from './all.mjs';
 
@@ -11,7 +11,7 @@ export function isIntegerIndex(V: Value) {
     return false;
   }
   const numeric = X(CanonicalNumericIndexString(V));
-  if (numeric instanceof UndefinedValue) {
+  if (numeric === Value.undefined) {
     return false;
   }
   if (Object.is(numeric.numberValue(), +0)) {
@@ -26,7 +26,7 @@ export function isArrayIndex(V: Value) {
     return false;
   }
   const numeric = X(CanonicalNumericIndexString(V));
-  if (numeric instanceof UndefinedValue) {
+  if (numeric === Value.undefined) {
     return false;
   }
   if (!Number.isInteger(numeric.numberValue())) {

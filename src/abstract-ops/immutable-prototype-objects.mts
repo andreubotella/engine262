@@ -7,7 +7,7 @@ import { Assert, SameValue } from './all.mjs';
 /** https://tc39.es/ecma262/#sec-set-immutable-prototype */
 export function SetImmutablePrototype(O: ObjectValue, V: ObjectValue | NullValue): NormalCompletion<BooleanValue> | ThrowCompletion {
   // 1. Assert: Either Type(V) is Object or Type(V) is Null.
-  Assert(V instanceof ObjectValue || V instanceof NullValue);
+  Assert(V instanceof ObjectValue || V === Value.null);
   // 2. Let current be ? O.[[GetPrototypeOf]]().
   const current = Q(O.GetPrototypeOf());
   // 3. If SameValue(V, current) is true, return true.

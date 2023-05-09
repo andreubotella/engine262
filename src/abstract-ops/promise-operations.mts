@@ -215,11 +215,11 @@ export function NewPromiseCapability(C) {
   // 4. Let executorClosure be a new Abstract Closure with parameters (resolve, reject) that captures promiseCapability and performs the following steps when called:
   const executorClosure = ([resolve = Value.undefined, reject = Value.undefined]) => {
     // a. If promiseCapability.[[Resolve]] is not undefined, throw a TypeError exception.
-    if (!(promiseCapability.Resolve instanceof UndefinedValue)) {
+    if (!(promiseCapability.Resolve === Value.undefined)) {
       return surroundingAgent.Throw('TypeError', 'PromiseCapabilityFunctionAlreadySet', 'resolve');
     }
     // b. If promiseCapability.[[Reject]] is not undefined, throw a TypeError exception.
-    if (!(promiseCapability.Reject instanceof UndefinedValue)) {
+    if (!(promiseCapability.Reject === Value.undefined)) {
       return surroundingAgent.Throw('TypeError', 'PromiseCapabilityFunctionAlreadySet', 'reject');
     }
     // c. Set promiseCapability.[[Resolve]] to resolve.

@@ -7,7 +7,7 @@ import { Assert } from './all.mjs';
 export function SymbolDescriptiveString(sym: SymbolValue): JSStringValue {
   Assert(sym instanceof SymbolValue);
   let desc = sym.Description;
-  if (desc instanceof UndefinedValue) {
+  if (desc === Value.undefined) {
     desc = Value('');
   }
   return Value(`Symbol(${desc.stringValue()})`);

@@ -184,7 +184,7 @@ export function* AsyncIteratorClose(iteratorRecord, completion) {
 
 /** https://tc39.es/ecma262/#sec-createiterresultobject */
 export function CreateIterResultObject(value: Value, done: BooleanValue) {
-  Assert(done instanceof BooleanValue);
+  Assert(Value.isBoolean(done));
   const obj = OrdinaryObjectCreate(surroundingAgent.intrinsic('%Object.prototype%'));
   X(CreateDataProperty(obj, Value('value'), value));
   X(CreateDataProperty(obj, Value('done'), done));

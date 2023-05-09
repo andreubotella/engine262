@@ -5,12 +5,12 @@ import {
   wellKnownSymbols,
   type PropertyKeyValue,
   ObjectValue,
-  UndefinedValue,
   JSStringValue,
-  BooleanValue,
   type WithPrototype,
   type WithExtensible,
   type OrdinaryObject,
+  type UndefinedValue,
+  type BooleanValue,
 } from '../value.mjs';
 import { BoundNames } from '../static-semantics/all.mjs';
 import {
@@ -57,7 +57,7 @@ export interface UnmappedArgumentsObject extends OrdinaryObject {
 function ArgumentsGetOwnProperty(this: ArgumentsExoticObject, P: PropertyKeyValue): NormalCompletion<Descriptor | UndefinedValue> {
   const args = this;
   const desc = OrdinaryGetOwnProperty(args, P);
-  if (desc instanceof UndefinedValue) {
+  if (desc === Value.undefined) {
     return desc;
   }
   const map = args.ParameterMap;
@@ -146,7 +146,7 @@ function ArgumentsDelete(this: ArgumentsExoticObject, P: PropertyKeyValue): Norm
 /** https://tc39.es/ecma262/#sec-createunmappedargumentsobject */
 export function CreateUnmappedArgumentsObject(argumentsList: readonly Value[]): OrdinaryObject {
   const len = argumentsList.length;
-  const obj = OrdinaryObjectCreate(surroundingAgent.intrinsic('%Object.prototype%'), ['ParameterMap']) as Mutable<UnmappedArgumentsObject>;
+  const obj = OrdinaryObjectCreate(surroundingAgent.intrinsic('%Object.prototype%') as ObjectValue, ['ParameterMap']) as Mutable<UnmappedArgumentsObject>;
   obj[Symbol.toStringTag] = 'UnmappedArgumentsObject';
   obj.ParameterMap = Value.undefined;
   X(DefinePropertyOrThrow(obj, Value('length'), Descriptor({
@@ -168,8 +168,8 @@ export function CreateUnmappedArgumentsObject(argumentsList: readonly Value[]): 
     Configurable: Value.true,
   })));
   X(DefinePropertyOrThrow(obj, Value('callee'), Descriptor({
-    Get: surroundingAgent.intrinsic('%ThrowTypeError%'),
-    Set: surroundingAgent.intrinsic('%ThrowTypeError%'),
+    Get: surroundingAgent.intrinsic('%ThrowTypeError%') as FunctionObject,
+    Set: surroundingAgent.intrinsic('%ThrowTypeError%') as FunctionObject,
     Enumerable: Value.false,
     Configurable: Value.false,
   })));
@@ -215,7 +215,7 @@ export function CreateMappedArgumentsObject(func: ObjectValue, formals: ParseNod
   obj.Get = ArgumentsGet;
   obj.Set = ArgumentsSet;
   obj.Delete = ArgumentsDelete;
-  obj.Prototype = surroundingAgent.intrinsic('%Object.prototype%');
+  obj.Prototype = surroundingAgent.intrinsic('%Object.prototype%') as ObjectValue;
   const map = OrdinaryObjectCreate(Value.null);
   obj.ParameterMap = map;
   const parameterNames = BoundNames(formals);

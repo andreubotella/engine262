@@ -35,7 +35,7 @@ export function bootstrapNativeError(realmRec: Realm) {
     const Constructor = ([message = Value.undefined, options = Value.undefined], { NewTarget }) => {
       // 1. If NewTarget is undefined, let newTarget be the active function object; else let newTarget be NewTarget.
       let newTarget;
-      if (NewTarget instanceof UndefinedValue) {
+      if (NewTarget === Value.undefined) {
         newTarget = surroundingAgent.activeFunctionObject;
       } else {
         newTarget = NewTarget;

@@ -107,13 +107,13 @@ export function OrdinaryToPrimitive(O: ObjectValue, hint: 'string' | 'number'): 
 
 /** https://tc39.es/ecma262/#sec-toboolean */
 export function ToBoolean(argument: Value): BooleanValue {
-  if (argument instanceof UndefinedValue) {
+  if (argument === Value.undefined) {
     // Return false.
     return Value.false;
-  } else if (argument instanceof NullValue) {
+  } else if (argument === Value.null) {
     // Return false.
     return Value.false;
-  } else if (argument instanceof BooleanValue) {
+  } else if (Value.isBoolean(argument)) {
     // Return argument.
     return argument;
   } else if (argument instanceof NumberValue) {
@@ -158,13 +158,13 @@ export function ToNumeric(value: Value): NormalCompletion<NumberValue | BigIntVa
 
 /** https://tc39.es/ecma262/#sec-tonumber */
 export function ToNumber(argument: Value): NormalCompletion<NumberValue> | ThrowCompletion {
-  if (argument instanceof UndefinedValue) {
+  if (argument === Value.undefined) {
     // Return NaN.
     return F(NaN);
-  } else if (argument instanceof NullValue) {
+  } else if (argument === Value.null) {
     // Return +0𝔽.
     return F(+0);
-  } else if (argument instanceof BooleanValue) {
+  } else if (Value.isBoolean(argument)) {
     // If argument is true, return 1𝔽.
     if (argument === Value.true) {
       return F(1);
@@ -363,13 +363,13 @@ export function ToBigInt(argument: Value): NormalCompletion<BigIntValue> | Throw
   // 1. Let prim be ? ToPrimitive(argument, number).
   const prim = Q(ToPrimitive(argument, 'number'));
   // 2. Return the value that prim corresponds to in Table 12 (#table-tobigint).
-  if (prim instanceof UndefinedValue) {
+  if (prim === Value.undefined) {
     // Throw a TypeError exception.
     return surroundingAgent.Throw('TypeError', 'CannotConvertToBigInt', prim);
-  } else if (prim instanceof NullValue) {
+  } else if (prim === Value.null) {
     // Throw a TypeError exception.
     return surroundingAgent.Throw('TypeError', 'CannotConvertToBigInt', prim);
-  } else if (prim instanceof BooleanValue) {
+  } else if (Value.isBoolean(prim)) {
     // Return 1ℤ if prim is true and 0ℤ if prim is false.
     if (prim === Value.true) {
       return Z(1n);
@@ -435,13 +435,13 @@ export function ToBigUint64(argument: Value): NormalCompletion<BigIntValue> | Th
 
 /** https://tc39.es/ecma262/#sec-tostring */
 export function ToString(argument: Value): NormalCompletion<JSStringValue> | ThrowCompletion {
-  if (argument instanceof UndefinedValue) {
+  if (argument === Value.undefined) {
     // Return "undefined".
     return new JSStringValue('undefined');
-  } else if (argument instanceof NullValue) {
+  } else if (argument === Value.null) {
     // Return "null".
     return new JSStringValue('null');
-  } else if (argument instanceof BooleanValue) {
+  } else if (Value.isBoolean(argument)) {
     // If argument is true, return "true".
     // If argument is false, return "false".
     return new JSStringValue(argument === Value.true ? 'true' : 'false');
@@ -468,13 +468,13 @@ export function ToString(argument: Value): NormalCompletion<JSStringValue> | Thr
 
 /** https://tc39.es/ecma262/#sec-toobject */
 export function ToObject(argument: Value): NormalCompletion<ObjectValue> | ThrowCompletion {
-  if (argument instanceof UndefinedValue) {
+  if (argument === Value.undefined) {
     // Throw a TypeError exception.
     return surroundingAgent.Throw('TypeError', 'CannotConvertToObject', 'undefined');
-  } else if (argument instanceof NullValue) {
+  } else if (argument === Value.null) {
     // Throw a TypeError exception.
     return surroundingAgent.Throw('TypeError', 'CannotConvertToObject', 'null');
-  } else if (argument instanceof BooleanValue) {
+  } else if (Value.isBoolean(argument)) {
     // Return a new Boolean object whose [[BooleanData]] internal slot is set to argument.
     const obj = OrdinaryObjectCreate(surroundingAgent.intrinsic('%Boolean.prototype%'), ['BooleanData']);
     obj.BooleanData = argument;
@@ -550,7 +550,7 @@ export function CanonicalNumericIndexString(argument: JSStringValue): NumberValu
 /** https://tc39.es/ecma262/#sec-toindex */
 export function ToIndex(value: Value): NormalCompletion<number> | ThrowCompletion {
   // 1. If value is undefined, then
-  if (value instanceof UndefinedValue) {
+  if (value === Value.undefined) {
     // a. Return 0.
     return 0;
   } else {

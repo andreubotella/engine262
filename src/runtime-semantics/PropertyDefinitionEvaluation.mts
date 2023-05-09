@@ -92,7 +92,7 @@ function* PropertyDefinitionEvaluation_PropertyDefinition(PropertyDefinition, ob
   // 7. If isProtoSetter is true, then
   if (isProtoSetter) {
     // a. If Type(propValue) is either Object or Null, then
-    if (propValue instanceof ObjectValue || propValue instanceof NullValue) {
+    if (propValue instanceof ObjectValue || propValue === Value.null) {
       // i. Return object.[[SetPrototypeOf]](propValue).
       return object.SetPrototypeOf(propValue);
     }

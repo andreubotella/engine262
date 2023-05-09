@@ -39,7 +39,7 @@ export function Z(x: bigint): BigIntValue {
 
 // 6.2.5.1 IsAccessorDescriptor
 export function IsAccessorDescriptor(Desc: Descriptor | UndefinedValue): Desc is AccessorDescriptor {
-  if (Desc instanceof UndefinedValue) {
+  if (Desc === Value.undefined) {
     return false;
   }
 
@@ -52,7 +52,7 @@ export function IsAccessorDescriptor(Desc: Descriptor | UndefinedValue): Desc is
 
 // 6.2.5.2 IsDataDescriptor
 export function IsDataDescriptor(Desc: Descriptor | UndefinedValue): Desc is DataDescriptor {
-  if (Desc instanceof UndefinedValue) {
+  if (Desc === Value.undefined) {
     return false;
   }
 
@@ -65,7 +65,7 @@ export function IsDataDescriptor(Desc: Descriptor | UndefinedValue): Desc is Dat
 
 // 6.2.5.3 IsGenericDescriptor
 export function IsGenericDescriptor(Desc: Descriptor | UndefinedValue): boolean {
-  if (Desc instanceof UndefinedValue) {
+  if (Desc === Value.undefined) {
     return false;
   }
 
@@ -78,7 +78,7 @@ export function IsGenericDescriptor(Desc: Descriptor | UndefinedValue): boolean 
 
 /** https://tc39.es/ecma262/#sec-frompropertydescriptor */
 export function FromPropertyDescriptor(Desc: Descriptor | UndefinedValue): ObjectValue | UndefinedValue {
-  if (Desc instanceof UndefinedValue) {
+  if (Desc === Value.undefined) {
     return Value.undefined;
   }
   const obj = OrdinaryObjectCreate(surroundingAgent.intrinsic('%Object.prototype%'));
@@ -134,7 +134,7 @@ export function ToPropertyDescriptor(Obj: Value): NormalCompletion<Descriptor> |
   const hasGet = Q(HasProperty(Obj, Value('get')));
   if (hasGet === Value.true) {
     const getter = Q(Get(Obj, Value('get')));
-    if (IsCallable(getter) === Value.false && !(getter instanceof UndefinedValue)) {
+    if (IsCallable(getter) === Value.false && !(getter === Value.undefined)) {
       return surroundingAgent.Throw('TypeError', 'NotAFunction', getter);
     }
     desc.Get = getter;
@@ -142,7 +142,7 @@ export function ToPropertyDescriptor(Obj: Value): NormalCompletion<Descriptor> |
   const hasSet = Q(HasProperty(Obj, Value('set')));
   if (hasSet === Value.true) {
     const setter = Q(Get(Obj, Value('set')));
-    if (IsCallable(setter) === Value.false && !(setter instanceof UndefinedValue)) {
+    if (IsCallable(setter) === Value.false && !(setter === Value.undefined)) {
       return surroundingAgent.Throw('TypeError', 'NotAFunction', setter);
     }
     desc.Set = setter;

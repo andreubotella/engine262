@@ -348,7 +348,7 @@ export function bootstrapArrayPrototypeShared(realmRec, proto, priorToEvaluating
     const O = Q(ToObject(thisValue));
     const len = Q(objectToLength(O));
     let sep;
-    if (separator instanceof UndefinedValue) {
+    if (separator === Value.undefined) {
       sep = ',';
     } else {
       sep = Q(ToString(separator)).stringValue();
@@ -362,7 +362,7 @@ export function bootstrapArrayPrototypeShared(realmRec, proto, priorToEvaluating
       const kStr = X(ToString(F(k)));
       const element = Q(Get(O, kStr));
       let next;
-      if (element instanceof UndefinedValue || element instanceof NullValue) {
+      if (element === Value.undefined || element === Value.null) {
         next = '';
       } else {
         next = Q(ToString(element)).stringValue();

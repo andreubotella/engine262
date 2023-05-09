@@ -38,7 +38,7 @@ function StringExoticGetOwnProperty(this: StringExoticObject, P: PropertyKeyValu
   const S = this;
   Assert(IsPropertyKey(P));
   const desc = OrdinaryGetOwnProperty(S, P);
-  if (!(desc instanceof UndefinedValue)) {
+  if (!(desc === Value.undefined)) {
     return desc;
   }
   return X(StringGetOwnProperty(S, P));
@@ -48,7 +48,7 @@ function StringExoticDefineOwnProperty(this: StringExoticObject, P: PropertyKeyV
   const S = this;
   Assert(IsPropertyKey(P));
   const stringDesc = X(StringGetOwnProperty(S, P));
-  if (!(stringDesc instanceof UndefinedValue)) {
+  if (!(stringDesc === Value.undefined)) {
     const extensible = S.Extensible;
     return X(IsCompatiblePropertyDescriptor(extensible, Desc, stringDesc));
   }
@@ -139,7 +139,7 @@ export function StringGetOwnProperty(S: StringExoticObject, P: PropertyKeyValue)
     return Value.undefined;
   }
   const index = CanonicalNumericIndexString(P);
-  if (index instanceof UndefinedValue) {
+  if (index === Value.undefined) {
     return Value.undefined;
   }
   if (IsIntegralNumber(index) === Value.false) {

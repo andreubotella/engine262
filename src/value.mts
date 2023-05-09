@@ -28,21 +28,70 @@ import { ValueMap, OutOfRange, callable } from './helpers.mjs';
 import type { PrivateElementRecord } from './runtime-semantics/MethodDefinitionEvaluation.mjs';
 
 
-// @ts-expect-error callable class
-export declare function Value(value: string): StringValue; // @ts-expect-error callable class
-export declare function Value(value: number): NumberValue; // @ts-expect-error callable class
-export declare function Value(value: bigint): BigIntValue; // @ts-expect-error callable class
-export declare function Value(value: undefined): UndefinedValue; // @ts-expect-error callable class
-export declare function Value(value: null): NullValue; // @ts-expect-error callable class
-export declare function Value(value: NativeFunction): FunctionObject; // @ts-expect-error callable class
-export declare function Value<T extends Value>(value: T): T; // @ts-expect-error callable class
-export declare function Value(value: string | number): StringValue | NumberValue;
 /** https://tc39.es/ecma262/#sec-ecmascript-language-types */
-export @callable((_target, _thisArg, [value]) => {
+export abstract class ValueClass {
+  constructor(value?: never) {
+    if (new.target !== ValueClass) {
+      return this;
+    }
+    // @ts-expect-error _Value is actually assignable to Value
+    return Value(value);
+  }
+
+  // This is a ghost property prevents TypeScript thinks Value is an empty object.
+  declare private readonly __brand?: never;
+}
+class PrimitiveValue extends ValueClass { }
+/** https://tc39.es/ecma262/#sec-ecmascript-language-types-undefined-type */
+class UndefinedValueClass extends PrimitiveValue { }
+
+/** https://tc39.es/ecma262/#sec-ecmascript-language-types-null-type */
+class NullValueClass extends PrimitiveValue { }
+
+/** https://tc39.es/ecma262/#sec-ecmascript-language-types-boolean-type */
+class BooleanValueClass extends PrimitiveValue {
+  readonly boolean: boolean;
+  constructor(v: boolean) {
+    super();
+    this.boolean = v;
+  }
+
+  booleanValue() {
+    return this.boolean;
+  }
+
+  [Symbol.for('nodejs.util.inspect.custom')]() {
+    return `Boolean { ${this.boolean} }`;
+  }
+}
+export type PropertyKeyValue = StringValue | SymbolValue;
+// this trick allows us to use `if (val !== Value.undefined)` to narrow type UndefinedValue | StringValue
+// without this trick, we will need to write `if (!(val === Value.undefined))`
+// see https://github.com/microsoft/TypeScript/issues/54191
+declare const uniqueTrue: unique symbol;
+declare const uniqueFalse: unique symbol;
+declare const uniqueUndefined: unique symbol;
+declare const uniqueNull: unique symbol;
+export type TrueValue = typeof uniqueTrue;
+export type FalseValue = typeof uniqueFalse;
+export type BooleanValue = TrueValue | FalseValue;
+export type UndefinedValue = typeof uniqueUndefined;
+export type NullValue = typeof uniqueNull;
+export type Value = StringValue | NumberValue | BigIntValue | UndefinedValue | NullValue | ObjectValue | FunctionObject | SymbolValue | BooleanValue;
+export function Value(value: string): StringValue;
+export function Value(value: number): NumberValue;
+export function Value(value: bigint): BigIntValue;
+export function Value(value: undefined): UndefinedValue;
+export function Value(value: null): NullValue;
+export function Value(value: NativeFunction): FunctionObject;
+export function Value<T extends ValueClass>(value: T): T;
+export function Value(value: string | number): StringValue | NumberValue
+export function Value(value: unknown): Value {
   if (value === null) {
     return Value.null;
   }
   if (value instanceof Value) {
+    // @ts-expect-error _Value is actually assignable to Value
     return value;
   }
   switch (typeof value) {
@@ -59,57 +108,15 @@ export @callable((_target, _thisArg, [value]) => {
     default:
       throw new OutOfRange('new Value', value);
   }
-}) // @ts-expect-error callable class
-abstract class Value {
-  /** @deprecated Use Value() instead of Value() */
-  constructor(value?: never) {
-    if (new.target !== Value) {
-      return this;
-    }
-    return Value(value);
-  }
-
-  // This is a ghost property prevents TypeScript thinks Value is an empty object.
-  declare readonly __brand?: 'Value';
-
-  static declare readonly null: NullValue;
-  static declare readonly undefined: UndefinedValue;
-  static declare readonly true: BooleanValue;
-  static declare readonly false: BooleanValue;
 }
-
-export class PrimitiveValue extends Value { }
-export type PropertyKeyValue = StringValue | SymbolValue;
-
-/** https://tc39.es/ecma262/#sec-ecmascript-language-types-undefined-type */
-export class UndefinedValue extends PrimitiveValue { }
-
-/** https://tc39.es/ecma262/#sec-ecmascript-language-types-null-type */
-export class NullValue extends PrimitiveValue { }
-
-/** https://tc39.es/ecma262/#sec-ecmascript-language-types-boolean-type */
-export class BooleanValue extends PrimitiveValue {
-  readonly boolean: boolean;
-  constructor(v: boolean) {
-    super();
-    this.boolean = v;
-  }
-
-  booleanValue() {
-    return this.boolean;
-  }
-
-  [Symbol.for('nodejs.util.inspect.custom')]() {
-    return `Boolean { ${this.boolean} }`;
-  }
+Value.true = new BooleanValueClass(true) as unknown as TrueValue;
+Value.false = new BooleanValueClass(false) as unknown as FalseValue;
+Value.null = new NullValueClass() as unknown as NullValue;
+Value.undefined = new UndefinedValueClass() as unknown as UndefinedValue;
+Value.isBoolean = function isBoolean(x: Value): x is BooleanValue {
+  return x === Value.true || x === Value.false;
 }
-
-Object.defineProperties(Value, {
-  undefined: { value: new UndefinedValue(), configurable: false, writable: false },
-  null: { value: new NullValue(), configurable: false, writable: false },
-  true: { value: new BooleanValue(true), configurable: false, writable: false },
-  false: { value: new BooleanValue(false), configurable: false, writable: false },
-});
+Object.freeze(Value);
 
 /** https://tc39.es/ecma262/#sec-ecmascript-language-types-string-type */
 class StringValue extends PrimitiveValue {
@@ -128,8 +135,8 @@ export { StringValue as JSStringValue };
 
 /** https://tc39.es/ecma262/#sec-ecmascript-language-types-symbol-type */
 export class SymbolValue extends PrimitiveValue {
-  readonly Description: StringValue;
-  constructor(Description: StringValue) {
+  readonly Description: StringValue | UndefinedValue;
+  constructor(Description: StringValue | UndefinedValue) {
     super();
     this.Description = Description;
   }
@@ -693,7 +700,7 @@ function BigIntBitwiseOp(op: '&' | '|' | '^', x: BigIntValue, y: BigIntValue) {
 }
 
 /** https://tc39.es/ecma262/#sec-private-names */
-export class PrivateName extends Value {
+export class PrivateName extends ValueClass {
   readonly Description: StringValue;
   constructor(Description: StringValue) {
     super();
@@ -703,7 +710,7 @@ export class PrivateName extends Value {
 }
 
 /** https://tc39.es/ecma262/#sec-object-type */
-export class ObjectValue extends Value {
+export class ObjectValue extends ValueClass {
   declare [Symbol.toStringTag]: string;
   readonly properties: ValueMap<StringValue | SymbolValue, Descriptor>;
   readonly internalSlotsList: readonly string[];
@@ -720,7 +727,7 @@ export class ObjectValue extends Value {
     return OrdinaryGetPrototypeOf(this as unknown as OrdinaryObject);
   }
 
-  SetPrototypeOf(V: Value): NormalCompletion<BooleanValue> | ThrowCompletion {
+  SetPrototypeOf(V: ObjectValue | NullValue): NormalCompletion<BooleanValue> | ThrowCompletion {
     return OrdinarySetPrototypeOf(this as unknown as OrdinaryObject, V);
   }
 
@@ -871,16 +878,16 @@ export class SharedDataBlock {
 }
 
 export type LanguageType = 'Undefined' | 'Null' | 'Boolean' | 'String' | 'Symbol' | 'Number' | 'BigInt' | 'Object';
-export function Type(val: Value) {
-  if (val instanceof UndefinedValue) {
+export function Type(val: ValueClass | Value) {
+  if (val === Value.undefined) {
     return 'Undefined';
   }
 
-  if (val instanceof NullValue) {
+  if (val === Value.null) {
     return 'Null';
   }
 
-  if (val instanceof BooleanValue) {
+  if (val instanceof BooleanValueClass) {
     return 'Boolean';
   }
 

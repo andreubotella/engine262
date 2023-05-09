@@ -145,7 +145,7 @@ function ModuleNamespaceGet(this: ModuleNamespaceExoticObject, P: PropertyKeyVal
   // 11. Let targetEnv be targetModule.[[Environment]].
   const targetEnv = targetModule.Environment;
   // 12. If targetEnv is undefined, throw a ReferenceError exception.
-  if (targetEnv instanceof UndefinedValue) {
+  if (targetEnv === Value.undefined) {
     return surroundingAgent.Throw('ReferenceError', 'NotDefined', P);
   }
   // 13. Return ? targetEnv.GetBindingValue(binding.[[BindingName]], true).

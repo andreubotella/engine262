@@ -46,7 +46,7 @@ function ArrayConstructor(argumentsList, { NewTarget }) {
   if (numberOfArgs === 0) {
     /** https://tc39.es/ecma262/#sec-array-constructor-array */
     Assert(numberOfArgs === 0);
-    if (NewTarget instanceof UndefinedValue) {
+    if (NewTarget === Value.undefined) {
       NewTarget = surroundingAgent.activeFunctionObject;
     }
     const proto = GetPrototypeFromConstructor(NewTarget, '%Array.prototype%');
@@ -55,7 +55,7 @@ function ArrayConstructor(argumentsList, { NewTarget }) {
     /** https://tc39.es/ecma262/#sec-array-len */
     const [len] = argumentsList;
     Assert(numberOfArgs === 1);
-    if (NewTarget instanceof UndefinedValue) {
+    if (NewTarget === Value.undefined) {
       NewTarget = surroundingAgent.activeFunctionObject;
     }
     const proto = GetPrototypeFromConstructor(NewTarget, '%Array.prototype%');
@@ -77,7 +77,7 @@ function ArrayConstructor(argumentsList, { NewTarget }) {
     /** https://tc39.es/ecma262/#sec-array-items */
     const items = argumentsList;
     Assert(numberOfArgs >= 2);
-    if (NewTarget instanceof UndefinedValue) {
+    if (NewTarget === Value.undefined) {
       NewTarget = surroundingAgent.activeFunctionObject;
     }
     const proto = GetPrototypeFromConstructor(NewTarget, '%Array.prototype%');

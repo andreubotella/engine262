@@ -394,7 +394,7 @@ export class FunctionEnvironmentRecord extends DeclarativeEnvironmentRecord {
     // 1. Assert: F is an ECMAScript function.
     Assert(isECMAScriptFunctionObject(F));
     // 2. Assert: Type(newTarget) is Undefined or Object.
-    Assert(newTarget instanceof UndefinedValue || newTarget instanceof ObjectValue);
+    Assert(newTarget === Value.undefined || newTarget instanceof ObjectValue);
     // 3. Let env be a new function Environment Record containing no bindings.
     super();
     // 4. Set env.[[FunctionObject]] to F.
@@ -930,7 +930,7 @@ export class ModuleEnvironmentRecord extends DeclarativeEnvironmentRecord {
 /** https://tc39.es/ecma262/#sec-getidentifierreference */
 export function GetIdentifierReference(env: EnvironmentRecord | NullValue, name: JSStringValue, strict: BooleanValue) {
   // 1. If lex is the value null, then
-  if (env instanceof NullValue) {
+  if (env === Value.null) {
     // a. Return the Reference Record { [[Base]]: unresolvable, [[ReferencedName]]: name, [[Strict]]: strict, [[ThisValue]]: empty }.
     return new ReferenceRecord({
       Base: 'unresolvable',

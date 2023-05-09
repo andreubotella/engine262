@@ -243,7 +243,7 @@ function InternalizeJSONProperty(holder, name, reviver) {
       while (I < len) {
         const Istr = X(ToString(F(I)));
         const newElement = Q(InternalizeJSONProperty(val, Istr, reviver));
-        if (newElement instanceof UndefinedValue) {
+        if (newElement === Value.undefined) {
           Q(val.Delete(Istr));
         } else {
           Q(CreateDataProperty(val, Istr, newElement));
@@ -254,7 +254,7 @@ function InternalizeJSONProperty(holder, name, reviver) {
       const keys = Q(EnumerableOwnPropertyNames(val, 'key'));
       for (const P of keys) {
         const newElement = Q(InternalizeJSONProperty(val, P, reviver));
-        if (newElement instanceof UndefinedValue) {
+        if (newElement === Value.undefined) {
           Q(val.Delete(P));
         } else {
           Q(CreateDataProperty(val, P, newElement));
@@ -283,8 +283,8 @@ function JSON_parse([text = Value.undefined, reviver = Value.undefined]) {
   // 6. Assert: unfiltered is either a String, Number, Boolean, Null, or an Object that is defined by either an ArrayLiteral or an ObjectLiteral.
   Assert(unfiltered instanceof JSStringValue
          || unfiltered instanceof NumberValue
-         || unfiltered instanceof BooleanValue
-         || unfiltered instanceof NullValue
+         || Value.isBoolean(unfiltered)
+         || unfiltered === Value.null
          || unfiltered instanceof ObjectValue);
   // 7. If IsCallable(reviver) is true, then
   if (IsCallable(reviver) === Value.true) {
